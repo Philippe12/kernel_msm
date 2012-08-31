@@ -2804,7 +2804,11 @@ static int msm_open_config(struct inode *inode, struct file *fp)
 	struct msm_cam_config_dev *config_cam = container_of(inode->i_cdev,
 		struct msm_cam_config_dev, config_cdev);
 	D("%s: open %s\n", __func__, fp->f_path.dentry->d_name.name);
-
+	if (g_server_dev.number_pcam_active.counter < 1 || g_server_dev.pcam_active == NULL) {
+		pr_err("%s: %s opened before camera enable, exit... number_pcam_active = %d\n",
+		__func__, fp->f_path.dentry->d_name.name, g_server_dev.number_pcam_active.counter);
+		return -1;
+	}
 	rc = nonseekable_open(inode, fp);
 	if (rc < 0) {
 		pr_err("%s: nonseekable_open error %d\n", __func__, rc);
