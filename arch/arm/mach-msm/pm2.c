@@ -488,66 +488,71 @@ static void msm_pm_config_hw_before_power_down(void)
  * Program the top csr from core0 context to put the
  * core1 into GDFS, as core1 is not running yet.
  */
-static void configure_top_csr(void)
+static void msm_pm_configure_top_csr(void)
 {
+	/*
+	 * Enable TCSR for core
+	 * Set reset bit for SPM
+	 * Set CLK_OFF bit
+	 * Set clamps bit
+	 * Set power_up bit
+	 * Disable TSCR for core
+	 */
+	uint32_t bit_pos[][6] = {
+		/* c2 */
+		{17, 15, 13, 16, 14, 17},
+		/* c1 & c3*/
+		{22, 20, 18, 21, 19, 22},
+	};
+	uint32_t mpa5_cfg_ctl[2] = {0x30, 0x48};
 	void __iomem *base_ptr;
 	unsigned int value = 0;
+	unsigned int cpu;
+	int i;
 
-	base_ptr = core1_reset_base();
-	if (!base_ptr)
-		return;
-
-	/* bring the core1 out of reset */
-	__raw_writel(0x3, base_ptr);
-	mb();
-	/*
-	 * override DBGNOPOWERDN and program the GDFS
-	 * count val
-	 */
-
-	 __raw_writel(0x00030002, (MSM_CFG_CTL_BASE + 0x38));
-	mb();
-
-	/* Initialize the SPM0 and SPM1 registers */
+	/* Initialize all the SPM registers */
 	msm_spm_reinit();
 
-	/* enable TCSR for core1 */
-	value = __raw_readl((MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG));
-	value |= BIT(22);
-	__raw_writel(value,  MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG);
-	mb();
+	for_each_possible_cpu(cpu) {
+		/* skip for C0 */
+		if (!cpu)
+			continue;
 
-	/* set reset bit for SPM1 */
-	value = __raw_readl((MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG));
-	value |= BIT(20);
-	__raw_writel(value,  MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG);
-	mb();
+		base_ptr = core_reset_base(cpu);
+		if (!base_ptr)
+			return;
 
-	/* set CLK_OFF bit */
-	value = __raw_readl((MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG));
-	value |= BIT(18);
-	__raw_writel(value,  MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG);
-	mb();
+		/* bring the core out of reset */
+		__raw_writel(0x3, base_ptr);
+		mb();
 
-	/* set clamps bit */
-	value = __raw_readl((MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG));
-	value |= BIT(21);
-	__raw_writel(value,  MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG);
-	mb();
+		/*
+		 * i == 0, Enable TCSR for core
+		 * i == 1, Set reset bit for SPM
+		 * i == 2, Set CLK_OFF bit
+		 * i == 3, Set clamps bit
+		 * i == 4, Set power_up bit
+		 */
+		for (i = 0; i < 5; i++) {
+			value = __raw_readl(MSM_CFG_CTL_BASE +
+							mpa5_cfg_ctl[cpu/2]);
+			value |= BIT(bit_pos[cpu%2][i]);
+			__raw_writel(value,  MSM_CFG_CTL_BASE +
+							mpa5_cfg_ctl[cpu/2]);
+			mb();
+		}
 
-	/* set power_up bit */
-	value = __raw_readl((MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG));
-	value |= BIT(19);
-	__raw_writel(value,  MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG);
-	mb();
+		/* i == 5, Disable TCSR for core */
+		value = __raw_readl(MSM_CFG_CTL_BASE +
+						mpa5_cfg_ctl[cpu/2]);
+		value &= ~BIT(bit_pos[cpu%2][i]);
+		__raw_writel(value,  MSM_CFG_CTL_BASE +
+						mpa5_cfg_ctl[cpu/2]);
+		mb();
 
-	/* Disable TSCR for core0 */
-	value = __raw_readl((MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG));
-	value &= ~BIT(22);
-	__raw_writel(value,  MSM_CFG_CTL_BASE + MPA5_CFG_CTL_REG);
-	mb();
-	__raw_writel(0x0, base_ptr);
-	mb();
+		__raw_writel(0x0, base_ptr);
+		mb();
+	}
 }
 
 /*
@@ -575,7 +580,7 @@ static void msm_pm_config_hw_after_power_up(void)
 			/*
 			 * Program the top csr to put the core1 into GDFS.
 			 */
-			configure_top_csr();
+			msm_pm_configure_top_csr();
 		}
 	} else {
 		__raw_writel(0, APPS_PWRDOWN);
@@ -896,11 +901,22 @@ static int msm_pm_power_collapse
 
 	msm_pm_irq_extns->enter_sleep1(true, from_idle,
 						&msm_pm_smem_data->irq_mask);
-	msm_sirc_enter_sleep();
-	msm_gpio_enter_sleep(from_idle);
 
 	msm_pm_smem_data->sleep_time = sleep_delay;
 	msm_pm_smem_data->resources_used = sleep_limit;
+
+	saved_acpuclk_rate = acpuclk_power_collapse();
+	MSM_PM_DPRINTK(MSM_PM_DEBUG_CLOCK, KERN_INFO,
+		"%s(): change clock rate (old rate = %lu)\n", __func__,
+		saved_acpuclk_rate);
+
+	if (saved_acpuclk_rate == 0) {
+		ret = -EAGAIN;
+		goto acpu_set_clock_fail;
+	}
+
+	msm_sirc_enter_sleep();
+	msm_gpio_enter_sleep(from_idle);
 
 	/* Enter PWRC/PWRC_SUSPEND */
 
@@ -958,16 +974,6 @@ static int msm_pm_power_collapse
 	msm_pm_config_hw_before_power_down();
 	MSM_PM_DEBUG_PRINT_STATE("msm_pm_power_collapse(): pre power down");
 
-	saved_acpuclk_rate = acpuclk_power_collapse();
-	MSM_PM_DPRINTK(MSM_PM_DEBUG_CLOCK, KERN_INFO,
-		"%s(): change clock rate (old rate = %lu)\n", __func__,
-		saved_acpuclk_rate);
-
-	if (saved_acpuclk_rate == 0) {
-		msm_pm_config_hw_after_power_up();
-		goto power_collapse_early_exit;
-	}
-
 #ifdef CONFIG_MSM_SM_EVENT
 	if (!from_idle) {
 		sm_add_event(SM_POWER_EVENT | SM_POWER_EVENT_SUSPEND, SM_EVENT_END, 0, 0, 0);
@@ -1008,13 +1014,14 @@ static int msm_pm_power_collapse
 		val = __raw_readl(MSM_CFG_CTL_BASE + 0x38);
 
 		/* 8x25Q */
-		if (SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 3) {
+		if (cpu_is_msm8625q()) {
 			if (val != 0x000F0002) {
 				for_each_possible_cpu(cpu) {
 					if (!cpu)
 						continue;
 					per_cpu(power_collapsed, cpu) = 1;
 				}
+				power_collapsed = 1;
 				/*
 				 * override DBGNOPOWERDN and program the GDFS
 				 * count val
@@ -1030,6 +1037,7 @@ static int msm_pm_power_collapse
 						continue;
 					per_cpu(power_collapsed, cpu) = 1;
 				}
+				power_collapsed = 1;
 				/*
 				 * override DBGNOPOWERDN and program the GDFS
 				 * count val
@@ -1062,14 +1070,6 @@ static int msm_pm_power_collapse
 	MSM_PM_DPRINTK(MSM_PM_DEBUG_SUSPEND | MSM_PM_DEBUG_POWER_COLLAPSE,
 		KERN_INFO,
 		"%s(): msm_pm_collapse returned %d\n", __func__, collapsed);
-
-	MSM_PM_DPRINTK(MSM_PM_DEBUG_CLOCK, KERN_INFO,
-		"%s(): restore clock rate to %lu\n", __func__,
-		saved_acpuclk_rate);
-	if (acpuclk_set_rate(smp_processor_id(), saved_acpuclk_rate,
-			SETRATE_PC) < 0)
-		printk(KERN_ERR "%s(): failed to restore clock rate(%lu)\n",
-			__func__, saved_acpuclk_rate);
 
 	msm_pm_irq_extns->exit_sleep1(msm_pm_smem_data->irq_mask,
 		msm_pm_smem_data->wakeup_reason,
@@ -1156,6 +1156,14 @@ static int msm_pm_power_collapse
 		sm_add_event(SM_POWER_EVENT | SM_POWER_EVENT_RESUME, SM_EVENT_START, (uint32_t)time, (void *)msm_pm_smem_data, sizeof(*msm_pm_smem_data));
 	}
 #endif
+	MSM_PM_DPRINTK(MSM_PM_DEBUG_CLOCK, KERN_INFO,
+		"%s(): restore clock rate to %lu\n", __func__,
+		saved_acpuclk_rate);
+	if (acpuclk_set_rate(smp_processor_id(), saved_acpuclk_rate,
+			SETRATE_PC) < 0)
+		printk(KERN_ERR "%s(): failed to restore clock rate(%lu)\n",
+			__func__, saved_acpuclk_rate);
+
 	/* DEM Master == RUN */
 
 	MSM_PM_DEBUG_PRINT_STATE("msm_pm_power_collapse(): WFPI RUN");
@@ -1235,10 +1243,19 @@ power_collapse_restore_gpio_bail:
 
 	MSM_PM_DEBUG_PRINT_STATE("msm_pm_power_collapse(): RUN");
 
+	MSM_PM_DPRINTK(MSM_PM_DEBUG_CLOCK, KERN_INFO,
+		"%s(): restore clock rate to %lu\n", __func__,
+		saved_acpuclk_rate);
+	if (acpuclk_set_rate(smp_processor_id(), saved_acpuclk_rate,
+			SETRATE_PC) < 0)
+		printk(KERN_ERR "%s(): failed to restore clock rate(%lu)\n",
+			__func__, saved_acpuclk_rate);
+
 	if (collapsed)
 		smd_sleep_exit();
 
-	if (msm_cpr_ops)
+acpu_set_clock_fail:
+	if (msm_cpr_ops && from_idle)
 		msm_cpr_ops->cpr_resume();
 
 power_collapse_bail:
@@ -1747,7 +1764,7 @@ static int __init msm_pm_init(void)
 		 * MPA5_GDFS_CNT_VAL[9:0] = Delay counter for
 		 * GDFS control.
 		 */
-		if (SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 3)
+		if (cpu_is_msm8625q())
 			val = 0x000F0002;
 		else
 			val = 0x00030002;
