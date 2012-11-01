@@ -1093,6 +1093,11 @@ err_ioremap:
 	iounmap(base);
 out:
 	enable = false;
+
+	/* Put cpr in reset */
+	if (pdata->cpr_reset)
+		pdata->cpr_reset();
+
 	return res;
 }
 
