@@ -494,7 +494,7 @@ static struct mxt_config_info mxt_config_array[] = {
 		.family_id	= 0x81,
 		.variant_id	= 0x18,
 		.version	= 0x10,
-		.build		= 0x04,
+		.build		= 0xAA,
 		.fw_name	= "mxt224EC25.enc",
 	},
 };
