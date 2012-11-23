@@ -137,7 +137,7 @@ int __devinit msm_pm_boot_init(struct msm_pm_boot_platform_data *pdata)
 			= msm_pm_config_rst_vector_after_pc;
 		break;
 	case MSM_PM_BOOT_CONFIG_REMAP_BOOT_ADDR:
-		if (!cpu_is_msm8625()) {
+		if (!cpu_is_msm8625() && !cpu_is_msm8625q()) {
 			void *remapped;
 
 			/*
