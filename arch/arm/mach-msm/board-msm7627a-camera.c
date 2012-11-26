@@ -153,6 +153,13 @@ static struct msm_camera_gpio_conf gpio_conf_ar0543 = {
 	.gpio_no_mux = 1,
 };
 #endif
+#ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
+static struct msm_camera_gpio_conf gpio_conf_s5k3h2_sunny_q8s02e = {
+	.camera_off_table = camera_off_gpio_table,
+	.camera_on_table = camera_on_gpio_table,
+	.gpio_no_mux = 1,
+};
+#endif
 #ifdef CONFIG_OV5648_TRULY_CM8352
 static struct msm_camera_gpio_conf gpio_conf_ov5648_truly_cm8352 = {
 	.camera_off_table = camera_off_gpio_table,
@@ -221,6 +228,12 @@ static struct camera_vreg_t ar0543_gpio_vreg[] = {
 static struct camera_vreg_t a8140_gpio_vreg[] = {
 	{"cam_a8140_avdd", REG_GPIO, 0, 0, 0},
 	{"cam_a8140_vdd",  REG_GPIO, 0, 0, 0},
+};
+#endif
+#ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
+static struct camera_vreg_t s5k3h2_sunny_q8s02e_gpio_vreg[] = {
+	{"cam_s5k3h2_sunny_q8s02e_avdd", REG_GPIO, 0, 0, 0},
+	{"cam_s5k3h2_sunny_q8s02e_vdd",  REG_GPIO, 0, 0, 0},
 };
 #endif
 static struct msm_camera_sensor_info msm_camera_sensor_s5k4e1_data;
@@ -617,6 +630,48 @@ static struct msm_camera_sensor_info msm_camera_sensor_ar0543_data = {
 };
 #endif
 
+#ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
+static struct msm_actuator_info msm_act_main_cam_9_info = {
+  .board_info             = &msm_act_main_cam_i2c_info,
+  .cam_name               = MSM_ACTUATOR_MAIN_CAM_9,
+  .bus_id                 = MSM_GSBI0_QUP_I2C_BUS_ID,
+  .vcm_pwd                = GPIO_NOT_CONFIGURED,
+  .vcm_enable             = 0,
+};
+
+static struct msm_camera_sensor_platform_info sensor_board_info_s5k3h2_sunny_q8s02e = {
+  .mount_angle            = MOUNT_ANGLE_NOT_CONFIGURED,
+  .cam_vreg               = msm_cam_vreg,
+  .num_vreg               = ARRAY_SIZE(msm_cam_vreg),
+  .gpio_conf              = &gpio_conf_s5k3h2_sunny_q8s02e,
+};
+
+static struct msm_camera_sensor_flash_src msm_flash_src_s5k3h2_sunny_q8s02e = {
+  .flash_sr_type                     = MSM_CAMERA_FLASH_SRC_LED1,
+  ._fsrc.ext_driver_src.led_en       = 13,
+  ._fsrc.ext_driver_src.led_flash_en = 32,
+};
+
+static struct msm_camera_sensor_flash_data flash_s5k3h2_sunny_q8s02e = {
+  .flash_type             = MSM_CAMERA_FLASH_LED,
+  .flash_src              = &msm_flash_src_s5k3h2_sunny_q8s02e,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_s5k3h2_sunny_q8s02e_data = {
+  .sensor_name            = "s5k3h2_sunny_q8s02e",
+  .sensor_reset_enable    = 1,
+  .pmic_gpio_enable       = 1,
+  .sensor_reset           = GPIO_NOT_CONFIGURED,
+  .sensor_pwd             = GPIO_NOT_CONFIGURED,
+  .pdata                  = &msm_camera_device_data_csi1[0],
+  .flash_data             = &flash_s5k3h2_sunny_q8s02e,
+  .sensor_platform_info   = &sensor_board_info_s5k3h2_sunny_q8s02e,
+  .csi_if                 = 1,
+  .camera_type            = BACK_CAMERA_2D,
+  .sensor_type            = BAYER_SENSOR,
+  .actuator_info          = &msm_act_main_cam_9_info,
+};
+#endif
 #ifdef CONFIG_MT9E013
 static struct msm_camera_sensor_flash_data flash_mt9e013 = {
 	.flash_type             = MSM_CAMERA_FLASH_LED,
@@ -843,6 +898,15 @@ static void __init msm7x27a_init_cam(void)
 		msm_camera_sensor_a8140_data.sensor_pwd = GPIO_SKU3_CAM_5MP_SHDN_N;
 		sensor_board_info_a8140.mount_angle = 90;
 #endif
+#ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
+      sensor_board_info_s5k3h2_sunny_q8s02e.cam_vreg = s5k3h2_sunny_q8s02e_gpio_vreg;
+      sensor_board_info_s5k3h2_sunny_q8s02e.num_vreg = ARRAY_SIZE(s5k3h2_sunny_q8s02e_gpio_vreg);
+      msm_act_main_cam_9_info.vcm_pwd = GPIO_SKU3_CAM_5MP_CAM_DRIVER_PWDN;
+      msm_act_main_cam_9_info.vcm_enable = 1;
+      msm_camera_sensor_s5k3h2_sunny_q8s02e_data.sensor_reset=GPIO_SKU3_CAM_5MP_CAMIF_RESET;
+      msm_camera_sensor_s5k3h2_sunny_q8s02e_data.sensor_pwd = GPIO_SKU3_CAM_5MP_SHDN_N;
+      sensor_board_info_s5k3h2_sunny_q8s02e.mount_angle = 90;
+#endif
 	}
 	else if(machine_is_msm8625q_skud())
 	{  //for SKUD
@@ -968,6 +1032,12 @@ static struct i2c_board_info i2c_camera_devices_sku5[] = {
 	{
 		I2C_BOARD_INFO("a8140", 0x62),
 		.platform_data = &msm_camera_sensor_a8140_data,
+	},
+#endif
+#ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
+	{
+		I2C_BOARD_INFO("s5k3h2_sunny_q8s02e", 0x32),
+		.platform_data = &msm_camera_sensor_s5k3h2_sunny_q8s02e_data,
 	},
 #endif
 };
@@ -1872,7 +1942,58 @@ void camera_af_software_powerdown(struct i2c_client *client)
 	}
 }
 EXPORT_SYMBOL(camera_af_software_powerdown);
+#ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
+int lcd_camera_power_l5_onoff(int on)
+{
+	static struct regulator *ldo5;
+	int rc;
 
+	printk("%s: on = %d\n", __func__, on);
+	ldo5 = regulator_get(NULL, "ldo5");
+	if (IS_ERR(ldo5)) {
+		rc = PTR_ERR(ldo5);
+		pr_err("%s: could not get ldo5: %d\n", __func__, rc);
+		goto out;
+	}
+
+	rc = regulator_set_voltage(ldo5, 1200000, 1200000);
+	if (rc) {
+		pr_err("%s: could not set ldo5 voltage: %d\n", __func__, rc);
+		goto ldo5_free;
+	}
+
+	rc = regulator_enable(ldo5);
+	if (rc) {
+		pr_err("%s: could not enable ldo5: %d\n", __func__, rc);
+		goto ldo5_free;
+	}
+
+	if (on) {
+		rc = regulator_enable(ldo5);
+		if (rc) {
+			pr_err("'%s' regulator enable failed, rc=%d\n",
+				"ldo5", rc);
+      goto ldo5_free;
+		}
+		pr_debug("%s(on): success\n", __func__);
+	} else {
+		rc = regulator_disable(ldo5);
+		if (rc){
+			pr_warning("'%s' regulator disable failed, rc=%d\n",
+				"ldo5", rc);
+      goto ldo5_free;
+    }
+		pr_debug("%s(off): success\n", __func__);
+	}
+
+ldo5_free:
+	regulator_put(ldo5);
+out:
+	ldo5 = NULL;
+	return rc;
+}
+EXPORT_SYMBOL(lcd_camera_power_l5_onoff);
+#endif
 void __init msm7627a_camera_init(void)
 {
 
