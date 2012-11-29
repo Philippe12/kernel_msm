@@ -420,8 +420,8 @@ static struct msm_camera_i2c_reg_conf ov7695_raw_full_settings[] = {
 //	;42 3813 06
 //	; sub mirror
 	{0x0101, 0x02},
-	{0x3811, 0x05},
-	{0x3813, 0x06},
+	{0x3811, 0x00},
+	{0x3813, 0x05},
 
 	{0x034c, 0x02},	//; x output size = 656
 	{0x034d, 0x90},	//; x output size
