@@ -38,6 +38,13 @@
 #define GPIO_SKUD_CAM_LED_EN 34
 #define GPIO_SKUD_CAM_LED_FLASH_EN 48
 
+#define GPIO_SKUE_CAM_5MP_SHDN_N 23
+#define GPIO_SKUE_CAM_5MP_CAMIF_RESET   79
+#define GPIO_SKUE_CAM_LED_EN 34
+#define GPIO_SKUE_CAM_LED_FLASH_EN 48
+#define GPIO_SKUE_CAM_PWR_EN 33
+
+
 #define GPIO_SKU7_CAM_VGA_SHDN    91
 #define GPIO_SKU7_CAM_5MP_SHDN_N   93         /* PWDN */
 #define GPIO_SKU7_CAM_5MP_CAMIF_RESET   23   /* (board_is(EVT))?123:121 RESET */
@@ -160,6 +167,15 @@ static struct msm_camera_gpio_conf gpio_conf_s5k3h2_sunny_q8s02e = {
 	.gpio_no_mux = 1,
 };
 #endif
+
+#ifdef CONFIG_AR0542
+static struct msm_camera_gpio_conf gpio_conf_ar0542 = {
+	.camera_off_table = camera_off_gpio_table,
+	.camera_on_table = camera_on_gpio_table,
+	.gpio_no_mux = 1,
+};
+#endif
+
 #ifdef CONFIG_OV5648_TRULY_CM8352
 static struct msm_camera_gpio_conf gpio_conf_ov5648_truly_cm8352 = {
 	.camera_off_table = camera_off_gpio_table,
@@ -218,6 +234,7 @@ static struct camera_vreg_t ov7692_gpio_vreg[] = {
 	{"cam_ov7692_vdd", REG_GPIO, 0, 0, 0},
 };
 #endif
+
 #ifdef CONFIG_AR0543
 static struct camera_vreg_t ar0543_gpio_vreg[] = {
 	{"cam_ar0543_avdd", REG_GPIO, 0, 0, 0},
@@ -236,6 +253,13 @@ static struct camera_vreg_t s5k3h2_sunny_q8s02e_gpio_vreg[] = {
 	{"cam_s5k3h2_sunny_q8s02e_vdd",  REG_GPIO, 0, 0, 0},
 };
 #endif
+#ifdef CONFIG_AR0542
+static struct camera_vreg_t ar0542_gpio_vreg[] = {
+//	{"cam_ar0542_avdd", REG_GPIO, 0, 0, 0},
+//	{"cam_ar0542_vdd",  REG_GPIO, 0, 0, 0},
+};
+#endif
+
 static struct msm_camera_sensor_info msm_camera_sensor_s5k4e1_data;
 
 struct msm_camera_device_platform_data msm_camera_device_data_csi1[] = {
@@ -596,6 +620,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_ov8825_data = {
 };
 #endif
 
+
 #ifdef CONFIG_AR0543
 static struct msm_camera_sensor_platform_info sensor_board_info_ar0543 = {
   .mount_angle            = MOUNT_ANGLE_NOT_CONFIGURED,
@@ -670,6 +695,48 @@ static struct msm_camera_sensor_info msm_camera_sensor_s5k3h2_sunny_q8s02e_data 
   .camera_type            = BACK_CAMERA_2D,
   .sensor_type            = BAYER_SENSOR,
   .actuator_info          = &msm_act_main_cam_9_info,
+};
+#endif
+#ifdef CONFIG_AR0542
+static struct msm_camera_sensor_platform_info sensor_board_info_ar0542 = {
+  .mount_angle            = MOUNT_ANGLE_NOT_CONFIGURED,
+  .cam_vreg               = msm_cam_vreg,
+  .num_vreg               = ARRAY_SIZE(msm_cam_vreg),
+  .gpio_conf              = &gpio_conf_ar0542,
+};
+
+static struct msm_camera_sensor_flash_src msm_flash_src_ar0542 = {
+  .flash_sr_type                     = MSM_CAMERA_FLASH_SRC_LED1,
+  ._fsrc.ext_driver_src.led_en       = 13,
+  ._fsrc.ext_driver_src.led_flash_en = 32,
+};
+
+static struct msm_camera_sensor_flash_data flash_ar0542 = {
+  .flash_type             = MSM_CAMERA_FLASH_LED,
+  .flash_src              = &msm_flash_src_ar0542,
+};
+
+static struct msm_actuator_info msm_act_main_cam_10_info = {
+        .board_info     = &msm_act_main_cam_i2c_info,
+        .cam_name   = MSM_ACTUATOR_MAIN_CAM_10,
+        .bus_id         = MSM_GSBI0_QUP_I2C_BUS_ID,
+        .vcm_pwd        = GPIO_NOT_CONFIGURED,
+        .vcm_enable     = 0,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_ar0542_data = {
+  .sensor_name            = "ar0542",
+  .sensor_reset_enable    = 1,
+  .pmic_gpio_enable       = 1,
+  .sensor_reset           = GPIO_NOT_CONFIGURED,
+  .sensor_pwd             = GPIO_NOT_CONFIGURED,
+  .pdata                  = &msm_camera_device_data_csi1[0],
+  .flash_data             = &flash_ar0542,
+  .sensor_platform_info   = &sensor_board_info_ar0542,
+  .csi_if                 = 1,
+  .camera_type            = BACK_CAMERA_2D,
+  .sensor_type            = BAYER_SENSOR,
+  .actuator_info = &msm_act_main_cam_10_info,
 };
 #endif
 #ifdef CONFIG_MT9E013
@@ -781,6 +848,7 @@ static void __init msm7x27a_init_cam(void)
 			machine_is_msm7x27a_qrd5a() ||
 			machine_is_msm8625q_evbd() ||
 			machine_is_msm8625q_skud() ||
+			machine_is_msm8625q_skue() ||
 			machine_is_msm8625_ffa())){
 #ifdef CONFIG_S5K4E1
 		sensor_board_info_s5k4e1.cam_vreg = NULL;
@@ -941,13 +1009,26 @@ static void __init msm7x27a_init_cam(void)
 		sensor_board_info_ov7695_raw.mount_angle = 270;
 #endif
 	}
+	else if(machine_is_msm8625q_skue())
+	{
+#ifdef CONFIG_AR0542
+		sensor_board_info_ar0542.cam_vreg = ar0542_gpio_vreg;
+		sensor_board_info_ar0542.num_vreg = ARRAY_SIZE(ar0542_gpio_vreg);
+		msm_camera_sensor_ar0542_data.sensor_reset=GPIO_SKUE_CAM_5MP_CAMIF_RESET;
+		msm_camera_sensor_ar0542_data.sensor_pwd = GPIO_SKUE_CAM_5MP_SHDN_N;
+		sensor_board_info_ar0542.mount_angle = 90;
+		msm_flash_src_ar0542._fsrc.ext_driver_src.led_en = GPIO_SKUE_CAM_LED_EN;
+		msm_flash_src_ar0542._fsrc.ext_driver_src.led_flash_en = GPIO_SKUE_CAM_LED_FLASH_EN;
+#endif
+	}
 
 	platform_device_register(&msm_camera_server);
 	if (machine_is_msm8625_surf() || machine_is_msm8625_evb()
 			|| machine_is_msm8625_qrd5() || machine_is_msm7x27a_qrd5a() 
 			|| machine_is_msm8625_qrd7()
 			|| machine_is_msm8625q_evbd()
-			|| machine_is_msm8625q_skud()) {
+			|| machine_is_msm8625q_skud()
+			|| machine_is_msm8625q_skue()) {
 		platform_device_register(&msm8625_device_csic0);
 		platform_device_register(&msm8625_device_csic1);
 	} else {
@@ -960,7 +1041,8 @@ static void __init msm7x27a_init_cam(void)
 			|| machine_is_msm8625_qrd7()
 			|| machine_is_msm7x27a_qrd5a()
 			|| machine_is_msm8625q_evbd()
-			|| machine_is_msm8625q_skud())
+			|| machine_is_msm8625q_skud()
+			|| machine_is_msm8625q_skue())
 		*(int *) msm7x27a_device_clkctl.dev.platform_data = 1;
 	platform_device_register(&msm7x27a_device_clkctl);
 	platform_device_register(&msm7x27a_device_vfe);
@@ -1064,6 +1146,15 @@ static struct i2c_board_info i2c_camera_devices_skud[] = {
 	{
 		I2C_BOARD_INFO("ov5648_truly_cm8352", 0x36 << 1),//original
 		.platform_data = &msm_camera_sensor_ov5648_truly_cm8352_data,
+	},
+#endif
+};
+
+static struct i2c_board_info i2c_camera_devices_skue[] = {
+#ifdef CONFIG_AR0542
+	{
+		I2C_BOARD_INFO("ar0542", 0x64),
+		.platform_data = &msm_camera_sensor_ar0542_data,
 	},
 #endif
 };
@@ -1341,6 +1432,75 @@ static void skud_camera_gpio_cfg(void)
 	if (rc < 0)
 		pr_err("%s: unable to set gpio: %d direction for ov7695 camera\n",
 		__func__, GPIO_SKUD_CAM_1MP_PWDN);
+
+}
+
+
+static void skue_camera_gpio_cfg(void)
+{
+	int rc = 0;
+	printk("skuE_camera_gpio_cfg in, cfg gpio\n");
+	printk("gpio request: GPIO_SKUE_CAM_5MP_SHDN_N is %d\n", GPIO_SKUE_CAM_5MP_SHDN_N);
+	rc = gpio_request(GPIO_SKUE_CAM_5MP_SHDN_N, "AR0542");
+	if (rc < 0)
+		printk("%s: gpio_request AR0542 sensor_pwd: %d failed!",
+			 __func__, GPIO_SKUE_CAM_5MP_SHDN_N);
+
+	rc = gpio_tlmm_config(GPIO_CFG(GPIO_SKUE_CAM_5MP_SHDN_N,
+				0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN,
+				GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	if (rc < 0) {
+		printk("%s:unable to enable Powr Dwn gpio for main camera!\n",
+			 __func__);
+		gpio_free(GPIO_SKUE_CAM_5MP_SHDN_N);
+	}
+
+	rc = gpio_direction_output(GPIO_SKUE_CAM_5MP_SHDN_N, 1);
+	if (rc < 0)
+		pr_err("%s: unable to set gpio: %d direction for ov5648 camera\n",
+			__func__, GPIO_SKUE_CAM_5MP_SHDN_N);
+
+	printk("gpio request: GPIO_SKUE_CAM_5MP_CAMIF_RESET is %d\n", GPIO_SKUE_CAM_5MP_CAMIF_RESET);
+	rc = gpio_request(GPIO_SKUE_CAM_5MP_CAMIF_RESET, "AR0542");
+	if (rc < 0)
+		pr_err("%s: gpio_request AR0542 sensor_reset: %d failed!",
+			 __func__, GPIO_SKUE_CAM_5MP_CAMIF_RESET);
+
+	rc = gpio_tlmm_config(GPIO_CFG(
+				GPIO_SKUE_CAM_5MP_CAMIF_RESET,
+				0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN,
+				GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	if (rc < 0) {
+		pr_err("%s: unable to enable reset gpio for main camera!\n",
+			 __func__);
+		gpio_free(GPIO_SKUE_CAM_5MP_CAMIF_RESET);
+	}
+
+	rc = gpio_direction_output(
+			GPIO_SKUE_CAM_5MP_CAMIF_RESET, 1);
+	if (rc < 0)
+		pr_err("%s: unable to set gpio: %d direction for AR0542 camera\n",
+			__func__, GPIO_SKUE_CAM_5MP_CAMIF_RESET);
+
+	printk("gpio request: GPIO_SKUE_CAM_PWR_EN is %d\n", GPIO_SKUE_CAM_PWR_EN);
+		rc = gpio_request(GPIO_SKUE_CAM_PWR_EN, "AR0542");
+	if (rc < 0)
+	pr_err("%s: gpio_request AR0542 sensor_pwdn: %d failed!",
+		__func__, GPIO_SKUE_CAM_PWR_EN);
+
+	rc = gpio_tlmm_config(GPIO_CFG(
+		GPIO_SKUE_CAM_PWR_EN,
+		0, GPIO_CFG_OUTPUT, GPIO_CFG_PULL_DOWN,
+		GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+	if (rc < 0) {
+		pr_err("%s: unable to enable reset gpio for front camera!\n", __func__);
+		gpio_free(GPIO_SKUE_CAM_PWR_EN);
+	}
+
+	rc = gpio_direction_output(GPIO_SKUE_CAM_PWR_EN, 1);
+	if (rc < 0)
+		pr_err("%s: unable to set gpio: %d direction for AR0542 camera\n",
+		__func__, GPIO_SKUE_CAM_PWR_EN);
 
 }
 
@@ -1939,7 +2099,7 @@ void camera_af_software_powerdown(struct i2c_client *client)
 	printk("camera_af_software_powerdown IN...\n");
 	/* send software powerdown cmd to AF motor, avoid current leak */
 	if (machine_is_msm8625_qrd5()|| machine_is_msm7x27a_qrd5a() || machine_is_msm8625q_evbd() ||
-	machine_is_msm8625q_skud()){
+	machine_is_msm8625q_skud() || machine_is_msm8625q_skue()){
 		printk("SKUA AF Motor software powerdown, write i2c saddr:0x18, waddr:0x80, wdata:0x00\n");
 		rc = i2c_transfer(client->adapter, msg, 1);
 		if (rc < 0)
@@ -2021,6 +2181,9 @@ void __init msm7627a_camera_init(void)
 		 machine_is_msm8625q_evbd())
 	{
 		skud_camera_gpio_cfg();
+	}else if(machine_is_msm8625q_skue())
+	{
+		skue_camera_gpio_cfg();
 	}
 
 #ifndef CONFIG_MSM_CAMERA_V4L2
@@ -2035,7 +2198,8 @@ void __init msm7627a_camera_init(void)
 			|| machine_is_msm7627a_qrd3()
 			|| machine_is_msm8625_qrd7()
 			|| machine_is_msm8625q_evbd()
-			|| machine_is_msm8625q_skud()) {
+			|| machine_is_msm8625q_skud()
+			|| machine_is_msm8625q_skue()) {
 		platform_add_devices(camera_devices_evb,
 				ARRAY_SIZE(camera_devices_evb));
 	} else if (machine_is_msm7627a_qrd3())
@@ -2051,7 +2215,8 @@ void __init msm7627a_camera_init(void)
 					|| !machine_is_msm7627a_qrd3()
 					|| !machine_is_msm8625_qrd7()
 					|| machine_is_msm8625q_evbd()
-					|| !machine_is_msm8625q_skud())
+					|| !machine_is_msm8625q_skud()
+					|| !machine_is_msm8625q_skue())
 		register_i2c_devices();
 #ifndef CONFIG_MSM_CAMERA_V4L2
 	rc = regulator_bulk_get(NULL, ARRAY_SIZE(regs_camera), regs_camera);
@@ -2084,7 +2249,8 @@ void __init msm7627a_camera_init(void)
 			|| machine_is_msm7627a_qrd3()
 			|| machine_is_msm8625_qrd7()
 			|| machine_is_msm8625q_evbd()
-			|| machine_is_msm8625q_skud()) {
+			|| machine_is_msm8625q_skud()
+			|| machine_is_msm8625q_skue()) {
 		pr_debug("machine_is_msm7627a_evb i2c_register_board_info\n");
 		i2c_register_board_info(MSM_GSBI0_QUP_I2C_BUS_ID,
 				i2c_camera_devices_evb,
@@ -2113,5 +2279,11 @@ void __init msm7627a_camera_init(void)
 			i2c_register_board_info(MSM_GSBI0_QUP_I2C_BUS_ID,
 					i2c_camera_devices_skud,
 					ARRAY_SIZE(i2c_camera_devices_skud));
+		}else if(machine_is_msm8625q_skue())
+		{
+			printk("i2c_camera_devices_SKUE registered\n");
+			i2c_register_board_info(MSM_GSBI0_QUP_I2C_BUS_ID,
+					i2c_camera_devices_skue,
+					ARRAY_SIZE(i2c_camera_devices_skue));
 		}
 }

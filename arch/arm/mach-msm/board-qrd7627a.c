@@ -606,6 +606,7 @@ static struct regulator_consumer_supply vreg_consumers_EXT_2P85V[] = {
 #ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
 	REGULATOR_SUPPLY("cam_s5k3h2_sunny_q8s02e_avdd", "0-0032"),
 #endif
+	REGULATOR_SUPPLY("cam_ar0542_avdd", "0-0064"),
 };
 
 static struct regulator_consumer_supply vreg_consumers_EXT_1P8V[] = {
@@ -623,6 +624,7 @@ static struct regulator_consumer_supply vreg_consumers_EXT_1P8V[] = {
 #ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
 	REGULATOR_SUPPLY("cam_s5k3h2_sunny_q8s02e_vdd", "0-0032"),
 #endif
+	REGULATOR_SUPPLY("cam_ar0542_vdd", "0-0064"),
 };
 
 /* GPIO regulator constraints */
