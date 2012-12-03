@@ -56,7 +56,8 @@ static void gpio_wlan_config(void)
 					|| machine_is_msm7627a_qrd3()
 					|| machine_is_msm8625_qrd7())
 		gpio_wlan_sys_rest_en = 124;
-	else if(machine_is_msm8625q_skud())
+	else if(machine_is_msm8625q_skud()
+					||machine_is_msm8625q_skue())
 		gpio_wlan_sys_rest_en = 38;
 }
 
@@ -129,7 +130,6 @@ static unsigned int wlan_switch_regulators(int on)
 
 	if (machine_is_msm7627a_qrd1())
 		index = 2;
-
 	for ( ; index < ARRAY_SIZE(vreg_info); index++) {
 		if (on) {
 			rc = regulator_set_voltage(vreg_info[index].reg,
@@ -248,7 +248,8 @@ static unsigned int msm_AR600X_setup_power(bool on)
 					|| machine_is_msm7x27a_qrd5a()
 					|| machine_is_msm7627a_qrd3()
 					|| machine_is_msm8625_qrd7()
-					|| machine_is_msm8625q_skud()) {
+					|| machine_is_msm8625q_skud()
+					|| machine_is_msm8625q_skue()) {
 		rc = gpio_tlmm_config(GPIO_CFG(gpio_wlan_sys_rest_en, 0,
 					GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL,
 					GPIO_CFG_2MA), GPIO_CFG_ENABLE);
@@ -299,7 +300,8 @@ set_gpio_fail:
 gpio_fail:
 	if (!(machine_is_msm7627a_qrd1() || machine_is_msm7627a_evb() ||
 	    machine_is_msm8625_evb() || machine_is_msm8625_qrd5() ||
-	    machine_is_msm7627a_qrd3() || machine_is_msm8625_qrd7()))
+	    machine_is_msm7627a_qrd3() || machine_is_msm8625_qrd7()||
+	    machine_is_msm8625q_skud() || machine_is_msm8625q_skue()))
 			gpio_free(gpio_wlan_sys_rest_en);
 qrd_gpio_fail:
 	/* GPIO_WLAN_3V3_EN is only required for the QRD7627a */
@@ -339,7 +341,8 @@ static unsigned int msm_AR600X_shutdown_power(bool on)
 					|| machine_is_msm7x27a_qrd5a()
 					|| machine_is_msm7627a_qrd3()
 					|| machine_is_msm8625_qrd7()
-					|| machine_is_msm8625q_skud()) {
+					|| machine_is_msm8625q_skud()
+					|| machine_is_msm8625q_skue()) {
 		rc = gpio_tlmm_config(GPIO_CFG(gpio_wlan_sys_rest_en, 0,
 					GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL,
 					GPIO_CFG_2MA), GPIO_CFG_ENABLE);
@@ -387,7 +390,8 @@ set_gpio_fail:
 gpio_fail:
 	if (!(machine_is_msm7627a_qrd1() || machine_is_msm7627a_evb() ||
 	    machine_is_msm8625_evb() || machine_is_msm8625_qrd5() ||
-	    machine_is_msm7627a_qrd3() || machine_is_msm8625_qrd7()))
+	    machine_is_msm7627a_qrd3() || machine_is_msm8625_qrd7()||
+	    machine_is_msm8625q_skud() || machine_is_msm8625q_skue()))
 			gpio_free(gpio_wlan_sys_rest_en);
 qrd_gpio_fail:
 	/* GPIO_WLAN_3V3_EN is only required for the QRD7627a */
@@ -418,7 +422,9 @@ static int __init qrd_wlan_init(void)
 					|| machine_is_msm8625_evb()
 					|| machine_is_msm8625_qrd5()
 					|| machine_is_msm7627a_qrd3()
-					|| machine_is_msm8625_qrd7()) {
+					|| machine_is_msm8625_qrd7()
+					|| machine_is_msm8625q_skud()
+					|| machine_is_msm8625q_skue()) {
 		rc = gpio_tlmm_config(GPIO_CFG(gpio_wlan_sys_rest_en, 0,
 					GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL,
 					GPIO_CFG_2MA), GPIO_CFG_ENABLE);
