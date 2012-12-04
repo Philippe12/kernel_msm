@@ -537,8 +537,9 @@ static struct msm_pm_cpr_ops msm8625_pm_cpr_ops = {
 void __init msm_pm_register_cpr_ops(void)
 {
 	/* CPR presents on revision >= v2.0 chipsets */
-	if ((cpu_is_msm8625()  || cpu_is_msm8625q()) &&
+	if ((cpu_is_msm8625() &&
 			SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 2)
+			|| cpu_is_msm8625q())
 		msm_pm_set_cpr_ops(&msm8625_pm_cpr_ops);
 }
 
@@ -2182,8 +2183,8 @@ int __init msm7x2x_misc_init(void)
 		platform_device_register(&msm7x27a_device_acpuclk);
 	}
 
-	if ((cpu_is_msm8625()  || cpu_is_msm8625q()) &&
-			(SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 2))
+	if (cpu_is_msm8625q() || (cpu_is_msm8625() &&
+			(SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 2)))
 		msm_cpr_init();
 
 	if (!cpu_is_msm8625() && !cpu_is_msm8625q())
