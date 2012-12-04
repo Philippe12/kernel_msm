@@ -37,6 +37,7 @@
 
 #define OV5647_TRULY_CM6868_OTP_FEATURE
 static struct msm_sensor_ctrl_t ov5647_truly_cm6868_s_ctrl;
+static int exposure_delay = 0;
 
 DEFINE_MUTEX(ov5647_truly_cm6868_mut);
 
@@ -782,6 +783,10 @@ static int32_t ov5647_truly_cm6868_write_pict_exp_gain(struct msm_sensor_ctrl_t 
 
 	CDBG(KERN_ERR "snapshot exposure seting 0x%x, 0x%x, %d"
 		, gain, line, line);
+
+  if (line > 1974)
+    exposure_delay = 1;
+		
 	s_ctrl->func_tbl->sensor_group_hold_on(s_ctrl);
 	if (line > 1964) {
 		msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
@@ -871,8 +876,8 @@ static int32_t ov5647_truly_cm6868_write_pict_exp_gain(struct msm_sensor_ctrl_t 
 		gain_lsb,
 		MSM_CAMERA_I2C_BYTE_DATA);
 
-
 	s_ctrl->func_tbl->sensor_group_hold_off(s_ctrl);
+	
 	return 0;
 
 }
@@ -946,6 +951,11 @@ static int32_t ov5647_truly_cm6868_write_prev_exp_gain(struct msm_sensor_ctrl_t 
 		MSM_CAMERA_I2C_BYTE_DATA);
 
 	s_ctrl->func_tbl->sensor_group_hold_off(s_ctrl);
+
+	if (exposure_delay){
+	  msleep(150);
+	  exposure_delay = 0;
+	}
 
 	return 0;
 }
