@@ -203,6 +203,47 @@ static struct platform_device kp_pdev_skud = {
 };
 /* end of skud keypad device information */
 
+/* skue keypad device information */
+static unsigned int kp_row_gpios_skue[] = {31, 32};
+static unsigned int kp_col_gpios_skue[] = {37};
+
+static const unsigned short keymap_skue[] = {
+	KEY_VOLUMEUP,
+	KEY_VOLUMEDOWN,
+};
+
+static struct gpio_event_matrix_info kp_matrix_info_skue = {
+	.info.func      = gpio_event_matrix_func,
+	.keymap         = keymap_skue,
+	.output_gpios   = kp_row_gpios_skue,
+	.input_gpios    = kp_col_gpios_skue,
+	.noutputs       = ARRAY_SIZE(kp_row_gpios_skue),
+	.ninputs        = ARRAY_SIZE(kp_col_gpios_skue),
+	.settle_time.tv64 = 40 * NSEC_PER_USEC,
+	.poll_time.tv64 = 20 * NSEC_PER_MSEC,
+	.flags          = GPIOKPF_LEVEL_TRIGGERED_IRQ | GPIOKPF_ACTIVE_HIGH |
+			  GPIOKPF_PRINT_UNMAPPED_KEYS,
+};
+
+static struct gpio_event_info *kp_info_skue[] = {
+	&kp_matrix_info_skue.info,
+};
+
+static struct gpio_event_platform_data kp_pdata_skue = {
+	.name           = "7x27a_kp",
+	.info           = kp_info_skue,
+	.info_count     = ARRAY_SIZE(kp_info_skue)
+};
+
+static struct platform_device kp_pdev_skue = {
+	.name   = GPIO_EVENT_DEV_NAME,
+	.id     = -1,
+	.dev    = {
+		.platform_data  = &kp_pdata_skue,
+	},
+};
+/* end of skue keypad device information */
+
 #define LED_GPIO_PDM 96
 
 #define MXT_TS_IRQ_GPIO         48
@@ -1218,6 +1259,10 @@ void __init qrd7627a_add_io_devices(void)
 		platform_device_register(&kp_pdev_qrd3);
 	else if (machine_is_msm8625q_skud())
 		platform_device_register(&kp_pdev_skud);
+	else if (machine_is_msm8625q_skue())
+		platform_device_register(&kp_pdev_skue);
+
+	/* leds */
 
 	/* leds */
 	if (machine_is_msm7627a_evb() || machine_is_msm8625_evb()
