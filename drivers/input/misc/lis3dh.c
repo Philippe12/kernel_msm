@@ -261,9 +261,9 @@ static int lis3dh_report_acc_values(struct lis3dh_data *lis3dh_data)
 	if (res < 0)
 		return res;
 		
-	input_report_rel(lis3dh_data->input_dev, REL_RX, data.x);
-	input_report_rel(lis3dh_data->input_dev, REL_RY, data.y);
-	input_report_rel(lis3dh_data->input_dev, REL_RZ, data.z);
+	input_report_rel(lis3dh_data->input_dev, REL_RX, -data.y);
+	input_report_rel(lis3dh_data->input_dev, REL_RY, -data.x);
+	input_report_rel(lis3dh_data->input_dev, REL_RZ, -data.z);
 	input_sync(lis3dh_data->input_dev);
 	return res;
 }
