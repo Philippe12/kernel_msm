@@ -58,7 +58,7 @@ extern char msm_fuse_info[FUSE_INFO_LEN];
 #endif
 
 static bool enable = 1;
-static bool disable_cpr;
+static bool disable_cpr = true;
 module_param(enable, bool, 0644);
 MODULE_PARM_DESC(enable, "CPR Enable");
 
@@ -959,7 +959,6 @@ static int __devinit msm_cpr_probe(struct platform_device *pdev)
 
 	if (pdata->disable_cpr == true) {
 		pr_err("CPR disabled by modem\n");
-		disable_cpr = true;
 		return -EPERM;
 	}
 
@@ -1100,6 +1099,7 @@ static int __devinit msm_cpr_probe(struct platform_device *pdev)
 
 	pr_info("CPR: driver registered successfully\n");
 
+        disable_cpr = false;
 	return res;
 
 err_cpr_config:
