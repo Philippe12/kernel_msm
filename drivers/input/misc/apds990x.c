@@ -370,7 +370,7 @@ static void apds990x_change_ps_threshold(struct i2c_client *client)
 		data->pilt = data->ps_hysteresis_threshold;
 		data->piht = 1023;
 
-		printk("far-to-near detected\n");
+		pr_debug("far-to-near detected\n");
 	}
 	else if ( (data->ps_data <= data->pilt) && (data->ps_data < data->piht) ) {
 		/* near-to-far detected */
@@ -385,9 +385,9 @@ static void apds990x_change_ps_threshold(struct i2c_client *client)
 		data->pilt = 0;
 		data->piht = data->ps_threshold;
 
-		printk("near-to-far detected\n");
+		pr_debug("near-to-far detected\n");
 	} else {
-		printk("data->ps_data = %d, data->pilt = %d, data->piht = %d\n", data->ps_data, data->pilt, data->piht);
+		pr_debug("data->ps_data = %d, data->pilt = %d, data->piht = %d\n", data->ps_data, data->pilt, data->piht);
 	}
 }
 
@@ -419,7 +419,7 @@ static void apds990x_change_als_threshold(struct i2c_client *client)
 
 		data->ps_detection = 0;	/* near-to-far detected */
 
-		printk("apds_990x_proximity_handler = FAR\n");
+		pr_debug("apds_990x_proximity_handler = FAR\n");
 	}
 
 	input_report_abs(data->input_dev_als, ABS_MISC, luxValue); // report the lux level
@@ -458,7 +458,7 @@ static void apds990x_als_polling_work_handler(struct work_struct *work)
 	luxValue = LuxCalculation(client, cdata, irdata);
 	luxValue = luxValue>0 ? luxValue : 0;
 	luxValue = luxValue<10000 ? luxValue : 10000;
-	//printk("%s: lux = %d cdata = %x  irdata = %x pdata = %x \n", __func__, luxValue, cdata, irdata, pdata);
+	//pr_debug("%s: lux = %d cdata = %x  irdata = %x pdata = %x \n", __func__, luxValue, cdata, irdata, pdata);
 	// check PS under sunlight
 	if ( (data->ps_detection == 1) && (cdata > (75*(1024*(256-data->atime)))/100))	// PS was previously in far-to-near condition
 	{
@@ -474,7 +474,7 @@ static void apds990x_als_polling_work_handler(struct work_struct *work)
 
 		data->ps_detection = 0;	/* near-to-far detected */
 
-		printk("apds_990x_proximity_handler = FAR\n");
+		pr_debug("apds_990x_proximity_handler = FAR\n");
 	}
 
 	input_report_abs(data->input_dev_als, ABS_MISC, luxValue); // report the lux level
@@ -496,7 +496,7 @@ static void apds990x_work_handler(struct work_struct *work)
 retry:
 	status = i2c_smbus_read_byte_data(client, CMD_BYTE|APDS990x_STATUS_REG);
 	if (status < 0) {
-		printk("fail to read data,status = %x\n", status);
+		pr_warning("fail to read data,status = %x\n", status);
 		if (retry_count--) {
 			usleep(50000);
 			goto retry;
@@ -507,7 +507,7 @@ retry:
 
 	i2c_smbus_write_byte_data(client, CMD_BYTE|APDS990x_ENABLE_REG, 1);	/* disable 990x's ADC first */
 
-	printk("status = %x, enable = %x\n", status, data->enable);
+	pr_debug("status = %x, enable = %x\n", status, data->enable);
 	//Interrupt is not reentrant both in UP and MP. But some variant/function here need to thread-safe.
 	mutex_lock(&data->update_lock);
 
@@ -523,7 +523,7 @@ retry:
 				apds990x_change_ps_threshold(client);
 			}
 			else {
-				printk("Triggered by background ambient noise\n");
+				pr_debug("Triggered by background ambient noise\n");
 			}
 		}
 
@@ -540,7 +540,7 @@ retry:
 				apds990x_change_ps_threshold(client);
 			}
 			else {
-				printk("Triggered by background ambient noise\n");
+				pr_debug("Triggered by background ambient noise\n");
 			}
 		}
 
@@ -561,7 +561,7 @@ static irqreturn_t apds990x_interrupt(int vec, void *info)
 	struct i2c_client *client=(struct i2c_client *)info;
 	struct apds990x_data *data = i2c_get_clientdata(client);
 
-	printk("==> apds990x_interrupt (timeout)\n");
+	pr_debug("==> apds990x_interrupt (timeout)\n");
 	wake_lock_timeout(&data->prx_wake_lock, HZ / 2);
 	//Seems linux-3.0 trends to use threaded-interrupt, so we can call the work directly.
 	apds990x_work_handler(&data->dwork.work);
@@ -591,7 +591,7 @@ static ssize_t apds990x_store_ps_sensor_thld(struct device *dev,
 	unsigned long det_val = simple_strtoul(++next_buf, NULL, 10);
 
 	if ((det_val < 0) || (det_val > 1023) || (hsyt_val < 0) || (hsyt_val >= det_val)) {
-		printk("%s:store unvalid det_val=%ld, hsyt_val=%ld\n", __func__, det_val, hsyt_val);
+		pr_err("%s:store unvalid det_val=%ld, hsyt_val=%ld\n", __func__, det_val, hsyt_val);
 		return -EINVAL;
 	}
 	mutex_lock(&data->update_lock);
@@ -622,10 +622,10 @@ static ssize_t apds990x_store_enable_ps_sensor(struct device *dev,
 	unsigned long val = simple_strtoul(buf, NULL, 10);
 	unsigned long flags;
 	
-	printk("%s: enable ps senosr ( %ld)\n", __func__, val);
+	pr_debug("%s: enable ps senosr ( %ld)\n", __func__, val);
 
 	if ((val != 0) && (val != 1)) {
-		printk("%s:store unvalid value=%ld\n", __func__, val);
+		pr_err("%s:store unvalid value=%ld\n", __func__, val);
 		return count;
 	}
 	//some variant/function here need to thread-safe. And it`s better to finish all the steps in one time.
@@ -728,11 +728,11 @@ static ssize_t apds990x_store_enable_als_sensor(struct device *dev,
 	unsigned long val = simple_strtoul(buf, NULL, 10);
  	unsigned long flags;
 
-	printk("%s: enable als sensor ( %ld)\n", __func__, val);
+	pr_debug("%s: enable als sensor ( %ld)\n", __func__, val);
 
 	if ((val != 0) && (val != 1))
 	{
-		printk("%s: enable als sensor=%ld\n", __func__, val);
+		pr_err("%s: enable als sensor=%ld\n", __func__, val);
 		return count;
 	}
 
@@ -897,13 +897,13 @@ static int apds990x_init_client(struct i2c_client *client)
 
 	id = i2c_smbus_read_byte_data(client, CMD_BYTE|APDS990x_ID_REG);
 	if (id == 0x20) {
-		printk("APDS-9901\n");
+		pr_debug("APDS-9901\n");
 	}
 	else if (id == 0x29) {
-		printk("APDS-990x\n");
+		pr_debug("APDS-990x\n");
 	}
 	else {
-		printk("Neither APDS-9901 nor APDS-9901\n");
+		pr_err("Neither APDS-9901 nor APDS-9901\n");
 		return -EIO;
 	}
 
@@ -972,7 +972,7 @@ static int __devinit apds990x_probe(struct i2c_client *client,
 	data->als_poll_delay = 100;	// default to 100ms
 	data->als_atime	= 0xdb;			// work in conjuction with als_poll_delay
 
-	printk("enable = %x\n", data->enable);
+	pr_debug("enable = %x\n", data->enable);
 
 	mutex_init(&data->update_lock);
 	spin_lock_init(&data->wq_lock);
@@ -982,7 +982,7 @@ static int __devinit apds990x_probe(struct i2c_client *client,
 	INIT_DELAYED_WORK(&data->dwork, apds990x_work_handler);
 	INIT_DELAYED_WORK(&data->als_dwork, apds990x_als_polling_work_handler);
 
-	printk("%s interrupt is hooked\n", __func__);
+	pr_debug("%s interrupt is hooked\n", __func__);
 
 	/* Initialize the APDS990x chip */
 	err = apds990x_init_client(client);
@@ -993,14 +993,14 @@ static int __devinit apds990x_probe(struct i2c_client *client,
 	data->input_dev_als = input_allocate_device();
 	if (!data->input_dev_als) {
 		err = -ENOMEM;
-		printk("Failed to allocate input device als\n");
+		pr_err("Failed to allocate input device als\n");
 		goto exit_kfree;
 	}
 
 	data->input_dev_ps = input_allocate_device();
 	if (!data->input_dev_ps) {
 		err = -ENOMEM;
-		printk("Failed to allocate input device ps\n");
+		pr_err("Failed to allocate input device ps\n");
 		goto exit_free_dev_als;
 	}
 
@@ -1016,7 +1016,7 @@ static int __devinit apds990x_probe(struct i2c_client *client,
 	err = input_register_device(data->input_dev_als);
 	if (err) {
 		err = -ENOMEM;
-		printk("Unable to register input device als: %s\n",
+		pr_err("Unable to register input device als: %s\n",
 		       data->input_dev_als->name);
 		goto exit_free_dev_ps;
 	}
@@ -1024,7 +1024,7 @@ static int __devinit apds990x_probe(struct i2c_client *client,
 	err = input_register_device(data->input_dev_ps);
 	if (err) {
 		err = -ENOMEM;
-		printk("Unable to register input device ps: %s\n",
+		pr_err("Unable to register input device ps: %s\n",
 		       data->input_dev_ps->name);
 		goto exit_unregister_dev_als;
 	}
@@ -1037,11 +1037,11 @@ static int __devinit apds990x_probe(struct i2c_client *client,
 	err = request_threaded_irq(data->pdata->irq, NULL, apds990x_interrupt, IRQ_TYPE_EDGE_FALLING,
 		APDS990x_DRV_NAME, (void *)client);
 	if (err) {
-		printk("%s Could not allocate irq(%d) !\n", __func__, data->pdata->irq);
+		pr_err("%s Could not allocate irq(%d) !\n", __func__, data->pdata->irq);
 		goto exit_remove_sysfs;
 	}
 	device_init_wakeup(&client->dev, 1);
-	printk("%s support ver. %s enabled\n", __func__, DRIVER_VERSION);
+	pr_debug("%s support ver. %s enabled\n", __func__, DRIVER_VERSION);
 
 	return 0;
 
