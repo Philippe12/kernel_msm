@@ -173,6 +173,11 @@ config AR0543
 	default n
 	---help---
 	  Aptina Bayer Sensor with FixFocus
+config A8140
+	bool "Sensor a8140 (BAYER 8M)"
+	default n
+	---help---
+	  Aptina Bayer Sensor with AutoFocus
 
 config DW9712_ACT
 	bool "Lens actuator dw9721"

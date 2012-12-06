@@ -538,6 +538,9 @@ static struct regulator_consumer_supply vreg_consumers_EXT_2P85V[] = {
 #ifdef CONFIG_AR0543
 	REGULATOR_SUPPLY("cam_ar0543_avdd", "0-0064"),
 #endif
+#ifdef CONFIG_A8140
+	REGULATOR_SUPPLY("cam_a8140_avdd", "0-0062"),
+#endif
 };
 
 static struct regulator_consumer_supply vreg_consumers_EXT_1P8V[] = {
@@ -548,6 +551,9 @@ static struct regulator_consumer_supply vreg_consumers_EXT_1P8V[] = {
 	REGULATOR_SUPPLY("lcd_vddi", "mipi_dsi.1"),
 #ifdef CONFIG_AR0543
 	REGULATOR_SUPPLY("cam_ar0543_vdd", "0-0064"),
+#endif
+#ifdef CONFIG_A8140
+	REGULATOR_SUPPLY("cam_a8140_vdd", "0-0062"),
 #endif
 };
 

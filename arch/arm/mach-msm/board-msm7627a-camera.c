@@ -160,6 +160,13 @@ static struct msm_camera_gpio_conf gpio_conf_ov5648_truly_cm8352 = {
 	.gpio_no_mux = 1,
 };
 #endif
+#ifdef CONFIG_A8140
+static struct msm_camera_gpio_conf gpio_conf_a8140 = {
+	.camera_off_table = camera_off_gpio_table,
+	.camera_on_table = camera_on_gpio_table,
+	.gpio_no_mux = 1,
+};
+#endif
 
 #ifdef CONFIG_MSM_CAMERA_FLASH
 static struct msm_camera_sensor_flash_src msm_flash_src = {
@@ -208,6 +215,12 @@ static struct camera_vreg_t ov7692_gpio_vreg[] = {
 static struct camera_vreg_t ar0543_gpio_vreg[] = {
 	{"cam_ar0543_avdd", REG_GPIO, 0, 0, 0},
 	{"cam_ar0543_vdd",  REG_GPIO, 0, 0, 0},
+};
+#endif
+#ifdef CONFIG_A8140
+static struct camera_vreg_t a8140_gpio_vreg[] = {
+	{"cam_a8140_avdd", REG_GPIO, 0, 0, 0},
+	{"cam_a8140_vdd",  REG_GPIO, 0, 0, 0},
 };
 #endif
 static struct msm_camera_sensor_info msm_camera_sensor_s5k4e1_data;
@@ -603,6 +616,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_ar0543_data = {
   .sensor_type            = BAYER_SENSOR,
 };
 #endif
+
 #ifdef CONFIG_MT9E013
 static struct msm_camera_sensor_flash_data flash_mt9e013 = {
 	.flash_type             = MSM_CAMERA_FLASH_LED,
@@ -627,7 +641,48 @@ static struct msm_camera_sensor_info msm_camera_sensor_mt9e013_data = {
 	.sensor_type = BAYER_SENSOR,
 };
 #endif
+#ifdef CONFIG_A8140
+static struct msm_actuator_info msm_act_main_cam_8_info = {
+  .board_info             = &msm_act_main_cam_i2c_info,
+  .cam_name               = MSM_ACTUATOR_MAIN_CAM_8,
+  .bus_id                 = MSM_GSBI0_QUP_I2C_BUS_ID,
+  .vcm_pwd                = GPIO_NOT_CONFIGURED,
+  .vcm_enable             = 0,
+};
 
+static struct msm_camera_sensor_platform_info sensor_board_info_a8140 = {
+  .mount_angle            = MOUNT_ANGLE_NOT_CONFIGURED,
+  .cam_vreg               = msm_cam_vreg,
+  .num_vreg               = ARRAY_SIZE(msm_cam_vreg),
+  .gpio_conf              = &gpio_conf_a8140,
+};
+
+static struct msm_camera_sensor_flash_src msm_flash_src_a8140 = {
+  .flash_sr_type                     = MSM_CAMERA_FLASH_SRC_LED1,
+  ._fsrc.ext_driver_src.led_en       = 13,
+  ._fsrc.ext_driver_src.led_flash_en = 32,
+};
+
+static struct msm_camera_sensor_flash_data flash_a8140 = {
+  .flash_type             = MSM_CAMERA_FLASH_LED,
+  .flash_src              = &msm_flash_src_a8140,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_a8140_data = {
+  .sensor_name            = "a8140",
+  .sensor_reset_enable    = 1,
+  .pmic_gpio_enable       = 1,
+  .sensor_reset           = GPIO_NOT_CONFIGURED,
+  .sensor_pwd             = GPIO_NOT_CONFIGURED,
+  .pdata                  = &msm_camera_device_data_csi1[0],
+  .flash_data             = &flash_a8140,
+  .sensor_platform_info   = &sensor_board_info_a8140,
+  .csi_if                 = 1,
+  .camera_type            = BACK_CAMERA_2D,
+  .sensor_type            = BAYER_SENSOR,
+  .actuator_info          = &msm_act_main_cam_8_info,
+};
+#endif
 #ifdef CONFIG_WEBCAM_OV9726
 static struct msm_camera_sensor_flash_data flash_ov9726 = {
 	.flash_type             = MSM_CAMERA_FLASH_LED,
@@ -779,6 +834,15 @@ static void __init msm7x27a_init_cam(void)
 		msm_camera_sensor_ar0543_data.sensor_pwd = GPIO_SKU3_CAM_5MP_SHDN_N;
 		sensor_board_info_ar0543.mount_angle = 90;
 #endif
+#ifdef CONFIG_A8140
+		sensor_board_info_a8140.cam_vreg = a8140_gpio_vreg;
+		sensor_board_info_a8140.num_vreg = ARRAY_SIZE(a8140_gpio_vreg);
+		msm_act_main_cam_8_info.vcm_pwd = GPIO_SKU3_CAM_5MP_CAM_DRIVER_PWDN;
+		msm_act_main_cam_8_info.vcm_enable = 1;
+		msm_camera_sensor_a8140_data.sensor_reset=GPIO_SKU3_CAM_5MP_CAMIF_RESET;
+		msm_camera_sensor_a8140_data.sensor_pwd = GPIO_SKU3_CAM_5MP_SHDN_N;
+		sensor_board_info_a8140.mount_angle = 90;
+#endif
 	}
 	else if(machine_is_msm8625q_skud())
 	{  //for SKUD
@@ -898,6 +962,12 @@ static struct i2c_board_info i2c_camera_devices_sku5[] = {
 	{
 		I2C_BOARD_INFO("ar0543", 0x64),
 		.platform_data = &msm_camera_sensor_ar0543_data,
+	},
+#endif
+#ifdef CONFIG_A8140
+	{
+		I2C_BOARD_INFO("a8140", 0x62),
+		.platform_data = &msm_camera_sensor_a8140_data,
 	},
 #endif
 };
