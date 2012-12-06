@@ -222,6 +222,13 @@ static struct camera_vreg_t ov5648_truly_cm8352_gpio_vreg[] = {
 	{"ldo12", REG_LDO, 2700000, 3300000, 0},
 	{"smps3", REG_LDO, 1800000, 1800000, 0},
 };
+
+static struct camera_vreg_t ov5648_gpio_vreg_evbd[] = {
+	{"ldo12", REG_LDO, 2700000, 3300000, 0},
+	{"smps3", REG_LDO, 1800000, 1800000, 0},
+	{"cam_ov5648_avdd", REG_GPIO, 0, 0, 0},
+	{"cam_ov5648_vdd", REG_GPIO, 0, 0, 0},
+};
 #endif
 #ifdef CONFIG_OV8825
 static struct camera_vreg_t ov8825_gpio_vreg[] = {
@@ -379,6 +386,13 @@ static struct msm_camera_gpio_conf skud_gpio_conf_ov7695 = {
 static struct camera_vreg_t ov7695_gpio_vreg[] = {
 	{"ldo12", REG_LDO, 2700000, 3300000, 0},
 	{"smps3", REG_LDO, 1800000, 1800000, 0},
+};
+
+static struct camera_vreg_t ov7695_gpio_vreg_evbd[] = {
+	{"ldo12", REG_LDO, 2700000, 3300000, 0},
+	{"smps3", REG_LDO, 1800000, 1800000, 0},
+	{"cam_ov7695_avdd", REG_GPIO, 0, 0, 0},
+	{"cam_ov7695_vdd", REG_GPIO, 0, 0, 0},
 };
 static struct msm_camera_sensor_platform_info sensor_board_info_ov7695 = {
 	.mount_angle = 90,
@@ -982,8 +996,13 @@ static void __init msm7x27a_init_cam(void)
 		machine_is_msm8625q_skud())
 	{  //for SKUD
 #ifdef CONFIG_OV5648_TRULY_CM8352
-		sensor_board_info_ov5648_truly_cm8352.cam_vreg = ov5648_truly_cm8352_gpio_vreg;
-		sensor_board_info_ov5648_truly_cm8352.num_vreg = ARRAY_SIZE(ov5648_truly_cm8352_gpio_vreg);
+		if(machine_is_msm8625q_evbd()) {
+			sensor_board_info_ov5648_truly_cm8352.cam_vreg = ov5648_gpio_vreg_evbd;
+			sensor_board_info_ov5648_truly_cm8352.num_vreg = ARRAY_SIZE(ov5648_gpio_vreg_evbd);
+		} else {
+			sensor_board_info_ov5648_truly_cm8352.cam_vreg = ov5648_truly_cm8352_gpio_vreg;
+			sensor_board_info_ov5648_truly_cm8352.num_vreg = ARRAY_SIZE(ov5648_truly_cm8352_gpio_vreg);
+		}
 		msm_act_main_cam_7_info.vcm_pwd = GPIO_SKUD_CAM_5MP_CAM_VCM_PWDN;
 		msm_act_main_cam_7_info.vcm_enable = 1;
 		msm_camera_sensor_ov5648_truly_cm8352_data.sensor_reset=GPIO_SKUD_CAM_5MP_CAMIF_RESET;
@@ -993,8 +1012,13 @@ static void __init msm7x27a_init_cam(void)
 		msm_flash_src_ov5648_truly_cm8352._fsrc.ext_driver_src.led_flash_en = GPIO_SKUD_CAM_LED_FLASH_EN;
 #endif
 #ifdef CONFIG_OV7695
-		sensor_board_info_ov7695.cam_vreg = ov7695_gpio_vreg;
-		sensor_board_info_ov7695.num_vreg = ARRAY_SIZE(ov7695_gpio_vreg);
+		if(machine_is_msm8625q_evbd()) {
+			sensor_board_info_ov7695.cam_vreg = ov7695_gpio_vreg_evbd;
+			sensor_board_info_ov7695.num_vreg = ARRAY_SIZE(ov7695_gpio_vreg_evbd);
+		} else {
+			sensor_board_info_ov7695.cam_vreg = ov7695_gpio_vreg;
+			sensor_board_info_ov7695.num_vreg = ARRAY_SIZE(ov7695_gpio_vreg);
+		}
 		msm_camera_sensor_ov7695_data.vcm_pwd = 0;
 		msm_camera_sensor_ov7695_data.vcm_enable = 0;
 		sensor_board_info_ov7695.gpio_conf = &skud_gpio_conf_ov7695;
@@ -2216,7 +2240,7 @@ void __init msm7627a_camera_init(void)
 	}else if(machine_is_msm8625_qrd5()|| machine_is_msm7x27a_qrd5a()){
 		sku5_camera_gpio_cfg();
 	}else if(machine_is_msm8625q_skud()||
-		 machine_is_msm8625q_evbd())
+			machine_is_msm8625q_evbd())
 	{
 		skud_camera_gpio_cfg();
 	}else if(machine_is_msm8625q_skue())
