@@ -226,6 +226,9 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 
 	pdev = container_of(dv, struct platform_device, dev);
 
+	if (machine_is_msm8625q_skue() && (pdev->id == 1) && (!vdd))
+		return 0;
+
 	rc = msm_sdcc_setup_gpio(pdev->id, !!vdd);
 	if (rc)
 		goto out;
@@ -258,7 +261,8 @@ static unsigned int msm7627a_sdcc_slot_status(struct device *dev)
 					machine_is_msm7627a_evb() ||
 					machine_is_msm8625_evb()  ||
 					machine_is_msm7627a_qrd3() ||
-					machine_is_msm8625_qrd7())
+					machine_is_msm8625_qrd7() ||
+					machine_is_msm8625q_skue())
 				status = !gpio_get_value(gpio_sdc1_hw_det);
 			else
 				status = gpio_get_value(gpio_sdc1_hw_det);
@@ -380,7 +384,7 @@ void __init msm7627a_init_mmc(void)
 	if (mmc_regulator_init(1, "mmc", 2850000))
 		return;
 	/* 8x25 EVT do not use hw detector */
-	if (!(machine_is_msm8625_qrd5()) && !(machine_is_msm7x27a_qrd5a()) && !(machine_is_msm8625q_skud()) && !(machine_is_msm8625q_skue()))
+	if (!(machine_is_msm8625_qrd5()) && !(machine_is_msm7x27a_qrd5a()) && !(machine_is_msm8625q_skud()))
 		sdc1_plat_data.status_irq = MSM_GPIO_TO_INT(gpio_sdc1_hw_det);
 	else
 		sdc1_plat_data.status = NULL;
