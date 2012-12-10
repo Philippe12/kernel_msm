@@ -1,4 +1,4 @@
-/* Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2012, The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -63,6 +63,7 @@
 
 #define	BATTERY_HIGH			4200
 #define	BATTERY_LOW			3500
+#define BATTERY_ULTRA_LOW		3400
 
 #define	TEMPERATURE_HOT			350
 #define	TEMPERATURE_COLD		50
@@ -369,6 +370,7 @@ void msm_battery_update_psy_status(void)
 	u32 hide;
 	u32 battery_status;
 	u32 battery_voltage;
+	u32 battery_voltage_real;
 	u32 battery_capacity;
 	s32 battery_temp;
 	u32 is_charging;
@@ -397,6 +399,7 @@ void msm_battery_update_psy_status(void)
 		hide			= reply_charger.hide;
 		battery_status		= msm_battery_info.get_battery_status();
 		battery_voltage		= msm_battery_info.get_battery_mvolts();
+		battery_voltage_real	= -1; // leave it as an invalid value now if use gauge.
 		battery_capacity	= msm_battery_info.get_batt_remaining_capacity();
 		battery_temp		= msm_battery_info.get_battery_temperature();
 		is_charging		= reply_charger.is_charging;
@@ -410,6 +413,7 @@ void msm_battery_update_psy_status(void)
 		hide			= reply_charger.hide;
 		battery_status		= reply_charger.battery_status;
 		battery_voltage		= reply_charger.battery_voltage & 0xFFFF;
+		battery_voltage_real	= (reply_charger.battery_voltage >> 16) & 0xFFFF;
 		battery_capacity	= reply_charger.battery_capacity & 0x7F;
 		battery_temp		= reply_charger.battery_temp * 10;
 		is_charging		= reply_charger.is_charging;
@@ -505,6 +509,13 @@ void msm_battery_update_psy_status(void)
 			pr_err("BATT: CAUTION: battery status invalid: %d\n",
 				  battery_status);
 		}
+	}
+
+	if(is_charging && battery_capacity <= 0
+		&& battery_voltage_real < BATTERY_ULTRA_LOW) {
+		// charging but input current < output current so that the battery would be exhausted
+		// set psy_health to POWER_SUPPLY_HEALTH_EXHAUST which will result framework to shutdown
+		msm_battery_info.psy_health = POWER_SUPPLY_HEALTH_EXHAUST;
 	}
 
 	msm_battery_info.charger_status		= charger_status;
