@@ -625,15 +625,17 @@ static struct msm_sensor_output_info_t ov5648_truly_cm8352_pip_dimensions[] = {
 		.op_pixel_clk = 110000000,
 		.binning_factor = 0x0,
 	},
-	{ /* For ZSL */
-		.x_output = 0xa20,		   /*2592*/
-		.y_output = 0x798,		   /*1944*/
+	//16:9 settings
+	{ /* For SNAPSHOT */
+		.x_output = 0xa00,		   /*2560*/
+		.y_output = 0x5a0,		   /*1440*/
 		.line_length_pclk = 0x160a,
-		.frame_length_lines = 0x7c0,
+		.frame_length_lines = 0x5c8,
 		.vt_pixel_clk = 84000000,
 		.op_pixel_clk = 158000000,
 		.binning_factor = 0x0,
 	},
+
 
 };
 
