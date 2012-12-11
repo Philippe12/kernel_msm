@@ -179,6 +179,11 @@ config A8140
 	---help---
 	  Aptina Bayer Sensor with AutoFocus
 
+config S5K3H2_SUNNY_Q8S02E
+	bool "Sensor Sensor s5k3h2 (Samsung 8M)"
+	default n
+	---help---
+	  Samsung 8M with Autofocus
 config DW9712_ACT
 	bool "Lens actuator dw9721"
 	depends on MSM_CAMERA && S5K4E1

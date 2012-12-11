@@ -541,6 +541,9 @@ static struct regulator_consumer_supply vreg_consumers_EXT_2P85V[] = {
 #ifdef CONFIG_A8140
 	REGULATOR_SUPPLY("cam_a8140_avdd", "0-0062"),
 #endif
+#ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
+	REGULATOR_SUPPLY("cam_s5k3h2_sunny_q8s02e_avdd", "0-0032"),
+#endif
 };
 
 static struct regulator_consumer_supply vreg_consumers_EXT_1P8V[] = {
@@ -554,6 +557,9 @@ static struct regulator_consumer_supply vreg_consumers_EXT_1P8V[] = {
 #endif
 #ifdef CONFIG_A8140
 	REGULATOR_SUPPLY("cam_a8140_vdd", "0-0062"),
+#endif
+#ifdef CONFIG_S5K3H2_SUNNY_Q8S02E
+	REGULATOR_SUPPLY("cam_s5k3h2_sunny_q8s02e_vdd", "0-0032"),
 #endif
 };
 
