@@ -35,6 +35,7 @@
 #include <mach/sdio_smem.h>
 #endif
 #include "smd_private.h"
+#include <linux/reboot.h>
 
 enum {
 	RMT_STORAGE_EVNT_OPEN = 0,
@@ -944,7 +945,7 @@ static int rmt_storage_release(struct inode *ip, struct file *fp)
 
 	return 0;
 }
-
+#define SHUTDOWN_WAIT_DELAY_MS	1000
 static long rmt_storage_ioctl(struct file *fp, unsigned int cmd,
 			    unsigned long arg)
 {
@@ -1591,6 +1592,150 @@ static void rmt_storage_restart_work(struct work_struct *work)
 				msecs_to_jiffies(RESTART_WORK_DELAY_MS));
 }
 
+static DECLARE_COMPLETION(fs_sync_complete);
+static atomic_t shutdown_status;
+
+void rmt_storage_client_shutdown_complete(void)
+{
+	static struct msm_rpc_client *rpc_client;
+	pr_debug("%s: ---\n", __func__);
+
+	/*don't be silly wait. Add some condition that when the rmc or rpc_client is null no need to be waiting. */
+	if(rmc == NULL) {
+		pr_debug("%s: rmc is null\n", __func__);
+		return;
+	}
+	rpc_client = rmt_storage_get_rpc_client(last_event.handle);
+
+	if (!rpc_client) {
+		pr_debug("%s: rpc_client is null\n", __func__);
+		return;
+	}
+
+	//check if it is not already done shutdown_status == 0 the complete fs_sync_complete
+	//wait for SHUTDOWN_WAIT_DELAY_MS + 2 times of msm_rpc_client_req2 time out
+	if (atomic_read(&shutdown_status) == 0)
+        wait_for_completion_timeout(&fs_sync_complete, msecs_to_jiffies(SHUTDOWN_WAIT_DELAY_MS + 2 * 10000));
+	pr_debug("%s: end---\n", __func__);
+}
+
+void rmt_storage_client_shutdown_prepare(void)
+{
+	int ret = 0;
+	struct rmt_storage_send_sts status;
+	static struct msm_rpc_client *rpc_client;
+	struct rmt_storage_kevent *kevent;
+
+	pr_debug("%s: start\n", __func__);
+	rpc_client = rmt_storage_get_rpc_client(last_event.handle);
+
+	if (!rpc_client) {
+		pr_debug("%s: rpc_client is null\n", __func__);
+		return;
+	}
+
+	rmt_storage_force_sync(rpc_client);
+	rmt_storage_get_sync_status(rpc_client);
+
+	if (atomic_read(&rmc->wcount) != 0) {
+		pr_debug("%s: wait for communicate with mp\n", __func__);
+		wake_up(&rmc->event_q);
+		ret = wait_event_interruptible_timeout(rmc->event_q,
+			atomic_read(&rmc->wcount) == 0, msecs_to_jiffies(SHUTDOWN_WAIT_DELAY_MS));
+		if(ret < 0) {
+			pr_debug("%s: wait error:%d\n", __func__, ret);
+
+			while (atomic_read(&rmc->total_events) != 0) {
+				atomic_dec(&rmc->total_events);
+
+				kevent = get_event(rmc);
+				WARN_ON(kevent == NULL);
+
+				status.err_code = -EIO;
+				status.data = kevent->event.usr_data;
+				status.handle = kevent->event.handle;
+				status.xfer_dir = kevent->event.id;
+				rpc_client = rmt_storage_get_rpc_client(status.handle);
+				if (rpc_client) {
+					//msm_rpc_client_req2 default max timeout 10000 ms
+					ret = msm_rpc_client_req2(rpc_client,
+						RMT_STORAGE_OP_FINISH_PROC,
+						rmt_storage_send_sts_arg,
+						&status, NULL, NULL, -1);
+				}
+				else
+					ret = -EINVAL;
+				if (ret < 0)
+					pr_err("%s: send status failed with ret val = %d, total_events:%d\n",
+						__func__, ret, atomic_read(&rmc->total_events));
+				if (atomic_dec_return(&rmc->wcount) == 0) {
+					wake_unlock(&rmc->wlock);
+					break;
+				}
+			}
+		}
+	}
+
+	/*if stock at wait for user space just give the last event to mp a finish signal*/
+	if(atomic_read(&rmc->wcount) != 0 && atomic_read(&rmc->total_events) == 0) {
+		status.err_code = -EIO;
+		status.data = last_event.usr_data;
+		status.handle = last_event.handle;
+		status.xfer_dir = last_event.id;
+		rpc_client = rmt_storage_get_rpc_client(status.handle);
+		if (rpc_client)
+			ret = msm_rpc_client_req2(rpc_client,
+				RMT_STORAGE_OP_FINISH_PROC,
+				rmt_storage_send_sts_arg,
+				&status, NULL, NULL, -1);
+		else
+			ret = -EINVAL;
+		if (ret < 0)
+			pr_err("%s: send status failed with ret val = %d, wcount=%d\n",
+				__func__, ret, atomic_read(&rmc->wcount));
+		if (atomic_dec_return(&rmc->wcount) == 0) {
+			wake_unlock(&rmc->wlock);
+		}
+	}
+	spin_lock(&rmc->lock);
+	complete(&fs_sync_complete);
+	atomic_inc(&shutdown_status);
+	spin_unlock(&rmc->lock);
+	pr_debug("%s: end\n", __func__);
+}
+
+static void rmt_storage_client_shutdown(struct platform_device *pdev)
+{
+	struct rpcsvr_platform_device *dev;
+	struct rmt_storage_srv *srv;
+
+	dev = container_of(pdev, struct rpcsvr_platform_device, base);
+	srv = rmt_storage_get_srv(dev->prog);
+
+	pr_debug("%s enter\n", __func__);
+	cancel_delayed_work_sync(&srv->restart_work);
+	rmt_storage_set_client_status(srv, 0);
+	pr_debug("%s end\n", __func__);
+}
+
+static int rmt_storage_reboot_call(struct notifier_block *this,
+                        unsigned long code, void *_cmd)
+{
+         switch (code) {
+         case SYS_RESTART:
+         case SYS_HALT:
+         case SYS_POWER_OFF:
+                rmt_storage_client_shutdown_prepare();
+                break;
+         }
+         return NOTIFY_DONE;
+}
+
+static struct notifier_block rmt_storage_reboot_call_notifier = {
+        .notifier_call = rmt_storage_reboot_call,
+        .priority = 101		//priority should higher than msm_rpc_reboot_call_notifier which is 100
+};
+
 static int rmt_storage_probe(struct platform_device *pdev)
 {
 	struct rpcsvr_platform_device *dev;
@@ -1641,21 +1786,15 @@ static int rmt_storage_probe(struct platform_device *pdev)
 	if (ret)
 		pr_err("%s: Failed to create sysfs node: %d\n", __func__, ret);
 
+	ret = register_reboot_notifier(&rmt_storage_reboot_call_notifier);
+	if (ret)
+		pr_err("%s: Failed to register reboot notifier", __func__);
+
 	return 0;
 
 unregister_client:
 	msm_rpc_unregister_client(srv->rpc_client);
 	return ret;
-}
-
-static void rmt_storage_client_shutdown(struct platform_device *pdev)
-{
-	struct rpcsvr_platform_device *dev;
-	struct rmt_storage_srv *srv;
-
-	dev = container_of(pdev, struct rpcsvr_platform_device, base);
-	srv = rmt_storage_get_srv(dev->prog);
-	rmt_storage_set_client_status(srv, 0);
 }
 
 static void rmt_storage_destroy_rmc(void)
@@ -1676,6 +1815,7 @@ static void __init rmt_storage_init_client_info(void)
 	 * its open requests. Hence reserve 0 bit.  */
 	__set_bit(0, &rmc->cids);
 	atomic_set(&rmc->wcount, 0);
+	atomic_set(&shutdown_status, 0);
 	wake_lock_init(&rmc->wlock, WAKE_LOCK_SUSPEND, "rmt_storage");
 }
 
@@ -1796,6 +1936,8 @@ static int __init rmt_storage_init(void)
 	if (!stats_dentry)
 		pr_err("%s: Failed to create stats debugfs file\n", __func__);
 #endif
+
+
 	return 0;
 
 #ifdef CONFIG_MSM_SDIO_SMEM
