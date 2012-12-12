@@ -184,6 +184,13 @@ config S5K3H2_SUNNY_Q8S02E
 	default n
 	---help---
 	  Samsung 8M with Autofocus
+config AR0542
+	bool "Sensor ar0542 (BAYER 5M)"
+	depends on MSM_CAMERA && MSM_CAMERA_V4L2
+	default y
+	---help---
+	  Aptina Bayer 5M RAW Sensor
+
 config DW9712_ACT
 	bool "Lens actuator dw9721"
 	depends on MSM_CAMERA && S5K4E1
