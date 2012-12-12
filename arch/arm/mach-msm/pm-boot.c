@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -200,7 +200,7 @@ int __devinit msm_pm_boot_init(struct msm_pm_boot_platform_data *pdata)
 					pdata->v_addr + mpa5_cfg_ctl[0]);
 
 			/* 8x25Q changes */
-			if (SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 3) {
+			if (cpu_is_msm8625q()) {
 				/* write 'entry' to boot remapper register */
 				__raw_writel(entry, (pdata->v_addr +
 						mpa5_boot_remap_addr[1]));
