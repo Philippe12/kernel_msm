@@ -533,9 +533,9 @@ static int msm_fb_detect_panel(const char *name)
 		if (!strncmp(name, "mipi_cmd_nt35510_wvga", 21))
 			ret = 0;
 	} else if (machine_is_msm8625q_skud()) {
-		if (!strncmp(name, "mipi_video_hx8389b_qhd", 22))
+		if (!strncmp(name, "mipi_video_hx8389b_qhd", 22)) 
                         ret = 0;
-        }  else if (machine_is_msm8625q_skue()) {
+	} else if (machine_is_msm8625q_skue()) {
 		if (!strncmp(name, "mipi_video_otm9605a_qhd", 23))
                         ret = 0;
         }
@@ -1569,6 +1569,7 @@ static struct mipi_dsi_platform_data mipi_dsi_pdata = {
 	.dsi_client_reset       = msm_fb_dsi_client_reset,
 	.get_lane_config	= msm_fb_get_lane_config,
 	.splash_is_enabled	= mipi_dsi_splash_is_enabled,
+	.dlane_swap		= 0x1,
 };
 #endif
 
@@ -1640,7 +1641,11 @@ void __init msm_fb_add_devices(void)
 		if (disable_splash)
 			mdp_pdata.cont_splash_enabled = 0x0;
 
-		platform_add_devices(skud_fb_devices,
+                /* SKUD and SKUD' use different lane connection */
+                if (cpu_is_msm8625q())
+                        mipi_dsi_pdata.dlane_swap = 0;
+
+                platform_add_devices(skud_fb_devices,
 				ARRAY_SIZE(skud_fb_devices));
         } else if (machine_is_msm8625q_skue()) {
 		if (disable_splash)
