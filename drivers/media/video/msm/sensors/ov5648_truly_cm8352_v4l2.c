@@ -1753,7 +1753,7 @@ static int32_t ov5648_truly_cm8352_write_prev_exp_gain(struct msm_sensor_ctrl_t 
 		s_ctrl->func_tbl->sensor_group_hold_on(s_ctrl);
 
 		/* adjust frame rate */
-		if (line > (fl_lines - offset))
+		if ((s_ctrl->curr_res < MSM_SENSOR_RES_2) && (line > (fl_lines - offset)))
 			fl_lines = line + offset;
 
 		msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
