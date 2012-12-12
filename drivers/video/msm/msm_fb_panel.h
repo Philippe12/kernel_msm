@@ -1,4 +1,4 @@
-/* Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2008-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -100,6 +100,7 @@ struct mipi_panel_info {
 	char data_lane1;
 	char data_lane2;
 	char data_lane3;
+	char dlane_swap;
 	char rgb_swap;
 	char b_sel;
 	char g_sel;

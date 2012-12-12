@@ -779,6 +779,7 @@ static void __init msm7x27a_init_cam(void)
 			machine_is_msm8625_evb() ||
 			machine_is_msm8625_qrd5() ||
 			machine_is_msm7x27a_qrd5a() ||
+			machine_is_msm8625q_evbd() ||
 			machine_is_msm8625q_skud() ||
 			machine_is_msm8625_ffa())){
 #ifdef CONFIG_S5K4E1
@@ -908,7 +909,8 @@ static void __init msm7x27a_init_cam(void)
       sensor_board_info_s5k3h2_sunny_q8s02e.mount_angle = 90;
 #endif
 	}
-	else if(machine_is_msm8625q_skud())
+	else if(machine_is_msm8625q_evbd()||
+		machine_is_msm8625q_skud())
 	{  //for SKUD
 #ifdef CONFIG_OV5648_TRULY_CM8352
 		sensor_board_info_ov5648_truly_cm8352.cam_vreg = ov5648_truly_cm8352_gpio_vreg;
@@ -943,7 +945,9 @@ static void __init msm7x27a_init_cam(void)
 	platform_device_register(&msm_camera_server);
 	if (machine_is_msm8625_surf() || machine_is_msm8625_evb()
 			|| machine_is_msm8625_qrd5() || machine_is_msm7x27a_qrd5a() 
-			|| machine_is_msm8625_qrd7() || machine_is_msm8625q_skud()) {
+			|| machine_is_msm8625_qrd7()
+			|| machine_is_msm8625q_evbd()
+			|| machine_is_msm8625q_skud()) {
 		platform_device_register(&msm8625_device_csic0);
 		platform_device_register(&msm8625_device_csic1);
 	} else {
@@ -955,6 +959,7 @@ static void __init msm7x27a_init_cam(void)
 			|| machine_is_msm7627a_qrd3()
 			|| machine_is_msm8625_qrd7()
 			|| machine_is_msm7x27a_qrd5a()
+			|| machine_is_msm8625q_evbd()
 			|| machine_is_msm8625q_skud())
 		*(int *) msm7x27a_device_clkctl.dev.platform_data = 1;
 	platform_device_register(&msm7x27a_device_clkctl);
@@ -1933,7 +1938,8 @@ void camera_af_software_powerdown(struct i2c_client *client)
 	};
 	printk("camera_af_software_powerdown IN...\n");
 	/* send software powerdown cmd to AF motor, avoid current leak */
-	if (machine_is_msm8625_qrd5()|| machine_is_msm7x27a_qrd5a() || machine_is_msm8625q_skud()){
+	if (machine_is_msm8625_qrd5()|| machine_is_msm7x27a_qrd5a() || machine_is_msm8625q_evbd() ||
+	machine_is_msm8625q_skud()){
 		printk("SKUA AF Motor software powerdown, write i2c saddr:0x18, waddr:0x80, wdata:0x00\n");
 		rc = i2c_transfer(client->adapter, msg, 1);
 		if (rc < 0)
@@ -2011,7 +2017,8 @@ void __init msm7627a_camera_init(void)
 		evb_camera_gpio_cfg();
 	}else if(machine_is_msm8625_qrd5()|| machine_is_msm7x27a_qrd5a()){
 		sku5_camera_gpio_cfg();
-	}else if(machine_is_msm8625q_skud())
+	}else if(machine_is_msm8625q_skud()||
+		 machine_is_msm8625q_evbd())
 	{
 		skud_camera_gpio_cfg();
 	}
@@ -2027,6 +2034,7 @@ void __init msm7627a_camera_init(void)
 			|| machine_is_msm7x27a_qrd5a()
 			|| machine_is_msm7627a_qrd3()
 			|| machine_is_msm8625_qrd7()
+			|| machine_is_msm8625q_evbd()
 			|| machine_is_msm8625q_skud()) {
 		platform_add_devices(camera_devices_evb,
 				ARRAY_SIZE(camera_devices_evb));
@@ -2042,6 +2050,7 @@ void __init msm7627a_camera_init(void)
 					|| !machine_is_msm7x27a_qrd5a()
 					|| !machine_is_msm7627a_qrd3()
 					|| !machine_is_msm8625_qrd7()
+					|| machine_is_msm8625q_evbd()
 					|| !machine_is_msm8625q_skud())
 		register_i2c_devices();
 #ifndef CONFIG_MSM_CAMERA_V4L2
@@ -2074,6 +2083,7 @@ void __init msm7627a_camera_init(void)
 			|| machine_is_msm7x27a_qrd5a()
 			|| machine_is_msm7627a_qrd3()
 			|| machine_is_msm8625_qrd7()
+			|| machine_is_msm8625q_evbd()
 			|| machine_is_msm8625q_skud()) {
 		pr_debug("machine_is_msm7627a_evb i2c_register_board_info\n");
 		i2c_register_board_info(MSM_GSBI0_QUP_I2C_BUS_ID,
@@ -2097,7 +2107,7 @@ void __init msm7627a_camera_init(void)
 			i2c_register_board_info(MSM_GSBI0_QUP_I2C_BUS_ID,
 					i2c_camera_devices_sku7,
 					ARRAY_SIZE(i2c_camera_devices_sku7));
-		}else if(machine_is_msm8625q_skud())
+		}else if(machine_is_msm8625q_skud() || machine_is_msm8625q_evbd())
 		{
 			printk("i2c_camera_devices_SKUD registered\n");
 			i2c_register_board_info(MSM_GSBI0_QUP_I2C_BUS_ID,

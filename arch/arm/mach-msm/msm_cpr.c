@@ -59,6 +59,8 @@ static bool disable_cpr;
 module_param(enable, bool, 0644);
 MODULE_PARM_DESC(enable, "CPR Enable");
 
+extern struct regulator *ncp6335d_handle;
+
 static int msm_cpr_debug_mask;
 module_param_named(
 	debug_mask, msm_cpr_debug_mask, int, S_IRUGO | S_IWUSR
@@ -916,6 +918,12 @@ static int __devinit msm_cpr_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
+#if defined(CONFIG_MSM_FUSE_INFO_DEBUG)
+	fuse_len += sprintf(tmp_buf, "the initial C2: %d \n", regulator_get_voltage(regulator_get(&pdev->dev, "vddx_cx")));
+	if(fuse_len < FUSE_INFO_LEN)
+		strcat(s, tmp_buf);
+#endif
+
 	if (pdata->disable_cpr == true) {
 		pr_err("CPR disabled by modem\n");
 		disable_cpr = true;
@@ -973,7 +981,8 @@ static int __devinit msm_cpr_probe(struct platform_device *pdev)
 	spin_lock_init(&cpr->cpr_lock);
 
 	/* Initialize the Voltage domain for CPR */
-	cpr->vreg_cx = regulator_get(&pdev->dev, "vddx_cx");
+	cpr->vreg_cx = ncp6335d_handle;
+
 	if (IS_ERR(cpr->vreg_cx)) {
 		res = PTR_ERR(cpr->vreg_cx);
 		pr_err("could not get regulator: %d\n", res);
