@@ -959,7 +959,8 @@ static void __init msm7627a_reserve(void)
 
 static void __init msm8625_reserve(void)
 {
-	memblock_remove(MSM8625_SECONDARY_PHYS, SZ_8);
+	memblock_remove(MSM8625_NON_CACHE_MEM, SZ_2K);
+	memblock_remove(MSM8625_CPU_PHYS, SZ_8);
 	msm7627a_reserve();
 }
 
@@ -1000,7 +1001,8 @@ static void __init msm8625_device_i2c_init(void)
 					= &msm_gsbi0_qup_i2c_pdata;
 	msm8625_gsbi1_qup_i2c_device.dev.platform_data
 					= &msm_gsbi1_qup_i2c_pdata;
-	if (machine_is_qrd_skud_prime()) {
+	if (machine_is_msm8625q_evbd()
+		|| machine_is_msm8625q_skud() || machine_is_msm8625q_skue()) {
 		for (i = 0 ; i < ARRAY_SIZE(i2c_gpio_config); i++) {
 			rc = gpio_tlmm_config(i2c_gpio_config[i].gpio_cfg,
 					GPIO_CFG_ENABLE);
@@ -1046,7 +1048,9 @@ static void __init msm_add_footswitch_devices(void)
 static void __init add_platform_devices(void)
 {
 	if (machine_is_msm8625_evb() || machine_is_msm8625_qrd7()
-				|| machine_is_msm8625_qrd5() || machine_is_msm8625q_skud()
+				|| machine_is_msm8625_qrd5()
+				|| machine_is_msm8625q_evbd()
+				|| machine_is_msm8625q_skud()
 				|| machine_is_msm8625q_skue()) {
 		platform_add_devices(msm8625_evb_devices,
 				ARRAY_SIZE(msm8625_evb_devices));
@@ -1141,7 +1145,8 @@ static void __init msm_qrd_init(void)
 	msm_pm_register_irqs();
 	msm_fb_add_devices();
 
-	if (machine_is_qrd_skud_prime())
+	if (machine_is_msm8625q_evbd() || machine_is_msm8625q_skud()
+				       || machine_is_msm8625q_skue())
 		i2c_register_board_info(2, i2c2_info,
 				ARRAY_SIZE(i2c2_info));
 
@@ -1296,6 +1301,16 @@ MACHINE_START(MSM8625_QRD5, "QRD MSM8625 QRD5")
 	.handle_irq	= gic_handle_irq,
 MACHINE_END
 
+MACHINE_START(MSM8625Q_EVBD, "QRD MSM8625Q EVBD")
+	.atag_offset	= 0x100,
+	.map_io		= msm8625_map_io,
+	.reserve	= msm8625_reserve,
+	.init_irq	= msm8625_init_irq,
+	.init_machine	= msm_qrd_init,
+	.timer		= &msm_timer,
+	.init_early	= qrd7627a_init_early,
+	.handle_irq	= gic_handle_irq,
+MACHINE_END
 MACHINE_START(MSM8625Q_SKUD, "QRD MSM8625Q SKUD")
 	.atag_offset	= 0x100,
 	.map_io		= msm8625_map_io,
