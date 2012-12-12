@@ -1222,7 +1222,9 @@ static struct platform_driver acpuclk_7627_driver = {
 
 static int __init acpuclk_7627_init(void)
 {
-	return platform_driver_register(&acpuclk_7627_driver);
+	if(!cpu_is_msm8625q())
+		return platform_driver_register(&acpuclk_7627_driver);
+	return 0;
 }
 postcore_initcall(acpuclk_7627_init);
 

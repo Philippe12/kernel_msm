@@ -2155,7 +2155,7 @@ int __init msm7x2x_misc_init(void)
 		platform_device_register(&msm7x27aa_device_acpuclk);
 	else if (cpu_is_msm8625() || cpu_is_msm8625q()) {
 
-		if (machine_is_qrd_skud_prime()) {
+		if (cpu_is_msm8625q()) {
 			msm_acpuclock_init();
 			platform_device_register(&msm8625q_device_acpuclk);
 		} else if (msm8625_cpu_id() == MSM8625)
