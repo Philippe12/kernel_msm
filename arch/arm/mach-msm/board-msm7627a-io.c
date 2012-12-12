@@ -27,6 +27,7 @@
 #include <asm/mach-types.h>
 #include <mach/rpc_server_handset.h>
 #include <mach/pmic.h>
+#include <mach/socinfo.h>
 
 #include "devices.h"
 #include "board-msm7627a.h"
@@ -829,8 +830,11 @@ static struct platform_device hs_pdev = {
 #define FT5X06_IRQ_GPIO		48
 #define FT5X06_RESET_GPIO	26
 
-#define FT5X06_IRQ_GPIO_QPR_SKUD	122
+#define FT5X06_IRQ_GPIO_QPR_SKUD	121
 #define FT5X06_RESET_GPIO_QPR_SKUD	26
+
+#define FT5X06_IRQ_GPIO_QPR_SKUD_PRIM	122
+#define FT5X06_RESET_GPIO_QPR_SKUD_PRIM	26
 
 #define FT5X06_IRQ_GPIO_QPR_SKUE	121
 #define FT5X06_RESET_GPIO_QPR_SKUE	26
@@ -938,11 +942,19 @@ static void __init ft5x06_touchpad_setup(void)
 	int rc;
 
 	if (machine_is_msm8625q_skud()) {
-		ft5x06_platformdata.irq_gpio = FT5X06_IRQ_GPIO_QPR_SKUD;
-		ft5x06_platformdata.reset_gpio = FT5X06_RESET_GPIO_QPR_SKUD;
-		ft5x06_platformdata.x_max = 540;
-		ft5x06_platformdata.y_max = 960;
-		ft5x06_device_info[0].irq = MSM_GPIO_TO_INT(FT5X06_IRQ_GPIO_QPR_SKUD);
+		if (cpu_is_msm8625()) {
+			ft5x06_platformdata.irq_gpio = FT5X06_IRQ_GPIO_QPR_SKUD_PRIM;
+			ft5x06_platformdata.reset_gpio = FT5X06_RESET_GPIO_QPR_SKUD_PRIM;
+			ft5x06_platformdata.x_max = 540;
+			ft5x06_platformdata.y_max = 960;
+			ft5x06_device_info[0].irq = MSM_GPIO_TO_INT(FT5X06_IRQ_GPIO_QPR_SKUD_PRIM);
+		} else {
+			ft5x06_platformdata.irq_gpio = FT5X06_IRQ_GPIO_QPR_SKUD;
+			ft5x06_platformdata.reset_gpio = FT5X06_RESET_GPIO_QPR_SKUD;
+			ft5x06_platformdata.x_max = 540;
+			ft5x06_platformdata.y_max = 960;
+			ft5x06_device_info[0].irq = MSM_GPIO_TO_INT(FT5X06_IRQ_GPIO_QPR_SKUD);
+		}
 	} else if (machine_is_msm8625q_skue()) {
 		ft5x06_platformdata.irq_gpio = FT5X06_IRQ_GPIO_QPR_SKUE;
 		ft5x06_platformdata.reset_gpio = FT5X06_RESET_GPIO_QPR_SKUE;
