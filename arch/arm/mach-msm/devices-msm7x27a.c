@@ -1927,6 +1927,9 @@ static void __init msm_cpr_init(void)
 		msm_cpr_mode_data[TURBO_MODE].turbo_Vmin = 1100000;
 	}
 
+	if (cpu_is_msm8625q())
+		msm_cpr_mode_data[TURBO_MODE].nom_Vmin = 950000;
+
 	/* Temporary fix for Quot deficiency on some pre-CS parts which turbo_quot <= 50,some bad chip */
 //	if (cpr_info->turbo_quot <= 50) {
 //		pr_info("%s: this is bad cs chip, need disable the cpr\n", __func__);
