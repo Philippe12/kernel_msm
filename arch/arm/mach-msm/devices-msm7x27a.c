@@ -950,10 +950,10 @@ void __init msm7x25a_kgsl_3d0_init(void)
 
 void __init msm8x25_kgsl_3d0_init(void)
 {
-	if (cpu_is_msm8625()) {
-		kgsl_3d0_pdata.idle_timeout = HZ/5;
-		kgsl_3d0_pdata.strtstp_sleepwake = false;
+	kgsl_3d0_pdata.idle_timeout = HZ/5;
+	kgsl_3d0_pdata.strtstp_sleepwake = false;
 
+	if (cpu_is_msm8625()) {
 		if (SOCINFO_VERSION_MAJOR(socinfo_get_version()) >= 2)
 			/* 8x25 v2.0 & above supports a higher GPU frequency */
 			kgsl_3d0_pdata.pwrlevel[0].gpu_freq = 320000000;
@@ -961,7 +961,22 @@ void __init msm8x25_kgsl_3d0_init(void)
 			kgsl_3d0_pdata.pwrlevel[0].gpu_freq = 300000000;
 
 		kgsl_3d0_pdata.pwrlevel[0].bus_freq = 200000000;
+	} else	if (cpu_is_msm8625q()) {
+			kgsl_3d0_pdata.num_levels = 4;
+
+			kgsl_3d0_pdata.pwrlevel[0].gpu_freq = 400000000;
+			kgsl_3d0_pdata.pwrlevel[0].bus_freq = 200000000;
+
+			kgsl_3d0_pdata.pwrlevel[1].gpu_freq = 320000000;
+			kgsl_3d0_pdata.pwrlevel[1].bus_freq = 200000000;
+
+			kgsl_3d0_pdata.pwrlevel[2].gpu_freq = 192000000;
+			kgsl_3d0_pdata.pwrlevel[2].bus_freq = 160000000;
+
+			kgsl_3d0_pdata.pwrlevel[3].gpu_freq = 133000000;
+			kgsl_3d0_pdata.pwrlevel[3].bus_freq = 0;
 	}
+
 }
 
 static void __init msm_register_device(struct platform_device *pdev, void *data)
