@@ -1651,6 +1651,10 @@ void __init msm_fb_add_devices(void)
 		if (disable_splash)
 			mdp_pdata.cont_splash_enabled = 0x0;
 
+                /* SKUE and SKUE' use different lane connection */
+                if (cpu_is_msm8625q())
+                        mipi_dsi_pdata.dlane_swap = 0;
+
 		platform_add_devices(skue_fb_devices,
 				ARRAY_SIZE(skue_fb_devices));
         } else {
