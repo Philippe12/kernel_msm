@@ -810,6 +810,15 @@ bool printk_rtc = 0;
 #endif
 module_param_named(rtc_time, printk_rtc, bool, S_IRUGO | S_IWUSR);
 
+#if defined(CONFIG_SMP)
+#if defined(CONFIG_PRINTK_CPU_ID)
+bool printk_cpuid = 1;
+#else
+bool printk_cpuid = 0;
+#endif
+module_param_named(cpu_id, printk_cpuid, bool, S_IRUGO | S_IWUSR);
+#endif
+
 /* Check if we have any console registered that can be called early in boot. */
 static int have_callable_console(void)
 {
@@ -1070,8 +1079,20 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 					emit_log_char(*tp);
 				printed_len += tlen;
 			}
+#ifdef CONFIG_SMP
+			if (printk_cpuid) {
+				/* add the cpu id stamp */
+				char tbuf[100], *tp;
+				unsigned tlen;
+				int id;
 
-
+				id = raw_smp_processor_id();
+				tlen = sprintf(tbuf, "[cpuid: %d] ", id);
+				for (tp = tbuf; tp < tbuf + tlen; tp++)
+					emit_log_char(*tp);
+				printed_len += tlen;
+			}
+#endif
 			if (!*p)
 				break;
 		}
