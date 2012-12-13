@@ -1282,8 +1282,8 @@ void ov5648_truly_cm8352_sensor_reset_stream(struct msm_sensor_ctrl_t *s_ctrl)
 
 #ifdef OV5648_TRULY_CM8352_OTP_FEATURE
 
-int RG_Ratio_Typical = 0x128;
-int BG_Ratio_Typical = 0x180;
+int RG_Ratio_Typical = 0x125;
+int BG_Ratio_Typical = 0x185;
 
 struct otp_struct {
      int customer_id;
