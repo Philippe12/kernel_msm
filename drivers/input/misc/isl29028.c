@@ -41,12 +41,12 @@
 #define ISL29028_I2C_ADDR   	0x44
 #define ISL29028_INTR	        17
 
-#define DEFAULT_PROX_INTERVAL  200//ms
+#define DEFAULT_PROX_INTERVAL  200//ms200-100 inprove performance
 #define DEFAULT_ALS_INTERVAL   500//ms
 
 #define CONFIG_ALS_H_RANGE
 #ifdef  CONFIG_ALS_H_RANGE
-#define CONFIG_VAL	0x02
+#define CONFIG_VAL	(ALS_H_RANGE | SLP_200MS)//proximity sleep pulse 200ms
 #else
 #define CONFIG_VAL	0x00
 #endif
@@ -419,9 +419,9 @@ static int to_lux(struct i2c_client *client,u16 data)
 
 	isl29028_read_reg(client, ISL29028_CONFIG, &temp);
 	if(temp & ALS_H_RANGE)
-		res = (data * 522)/1000;
+		res = (data * 522)/100;		//adjust the gain from 1000 to 100
 	else
-		res = (data * 326)/10000;
+		res = (data * 326)/1000;
 
 	return res;
 }
