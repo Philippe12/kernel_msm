@@ -743,7 +743,6 @@ static struct platform_device *msm8625_evb_devices[] __initdata = {
 	&msm8625_device_smd,
 	&msm8625_gsbi0_qup_i2c_device,
 	&msm8625_gsbi1_qup_i2c_device,
-	&msm8625q_i2c_gpio,
 	&msm8625_device_uart1,
 	&msm8625_device_uart_dm1,
 	&msm8625_device_otg,
@@ -1058,6 +1057,9 @@ static void __init add_platform_devices(void)
 				ARRAY_SIZE(msm8625_evb_devices));
 		platform_add_devices(qrd3_devices,
 				ARRAY_SIZE(qrd3_devices));
+		if (machine_is_msm8625q_evbd()
+			|| machine_is_msm8625q_skud() || machine_is_msm8625q_skue())
+			platform_device_register(&msm8625q_i2c_gpio);
 	}
 	else {
 		platform_add_devices(qrd7627a_devices,
