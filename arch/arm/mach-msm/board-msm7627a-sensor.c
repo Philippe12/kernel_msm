@@ -21,6 +21,10 @@
 #include <linux/input/apds990x.h>
 #endif
 
+#ifdef CONFIG_SENSORS_TMD2771X
+#include <linux/input/tmd2771x.h>
+#endif
+
 #ifdef CONFIG_MPU_SENSORS_MPU3050
 #include <linux/mpu.h>
 #endif
@@ -82,6 +86,58 @@ static int apds990x_setup(void)
         i2c_register_board_info(MSM_GSBI1_QUP_I2C_BUS_ID,
                         &i2c_info_apds990x, 1);
 
+        return retval;
+}
+#endif
+
+#ifdef CONFIG_SENSORS_TMD2771X
+#ifndef TMD2771X_IRQ_GPIO
+#define TMD2771X_IRQ_GPIO 17
+#endif
+
+#ifndef TMD2771X_PS_DETECTION_THRESHOLD
+#define TMD2771X_PS_DETECTION_THRESHOLD         600
+#endif
+
+#ifndef TMD2771X_PS_HSYTERESIS_THRESHOLD
+#define TMD2771X_PS_HSYTERESIS_THRESHOLD        500
+#endif
+
+#ifndef TMD2771X_ALS_THRESHOLD_HSYTERESIS
+#define TMD2771X_ALS_THRESHOLD_HSYTERESIS       20
+#endif
+
+#if defined(CONFIG_INPUT_KXTJ9)
+#include <linux/input/kxtj9.h>
+#endif
+
+static struct msm_gpio tmd2771x_cfg_data[] = {
+        {GPIO_CFG(TMD2771X_IRQ_GPIO, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_6MA),"tmd2771x_irq"},
+};
+
+static struct tmd2771x_platform_data tmd2771x_platformdata = {
+        .irq            = MSM_GPIO_TO_INT(TMD2771X_IRQ_GPIO),
+        .ps_det_thld    = TMD2771X_PS_DETECTION_THRESHOLD,
+        .ps_hsyt_thld   = TMD2771X_PS_HSYTERESIS_THRESHOLD,
+        .als_hsyt_thld  = TMD2771X_ALS_THRESHOLD_HSYTERESIS,
+};
+
+static struct i2c_board_info i2c_info_tmd2771x = {
+        I2C_BOARD_INFO("tmd2771x", 0x39),
+        .platform_data = &tmd2771x_platformdata,
+};
+
+static int tmd2771x_setup(void)
+{
+        int retval = 0;
+		int irbi;
+        retval = msm_gpios_request_enable(tmd2771x_cfg_data, sizeof(tmd2771x_cfg_data)/sizeof(struct msm_gpio));
+        if(retval) {
+                printk(KERN_ERR "%s: Failed to obtain L/P sensor interrupt. Code: %d.", __func__, retval);
+        }
+
+        irbi = i2c_register_board_info(MSM_GSBI1_QUP_I2C_BUS_ID,
+                        &i2c_info_tmd2771x, 1);
         return retval;
 }
 #endif
@@ -355,6 +411,13 @@ void __init msm7627a_sensor_init(void)
 	if ( machine_is_msm7627a_evb() || machine_is_msm8625_evb() || machine_is_msm8625_qrd5() || machine_is_msm7x27a_qrd5a()) {
 		pr_info("i2c_register_board_info APDS990X\n");
 		apds990x_setup();
+	}
+#endif
+
+#ifdef CONFIG_SENSORS_TMD2771X
+	if (machine_is_msm8625q_skue()) {
+		pr_info("i2c_register_board_info TMD2771X\n");
+		tmd2771x_setup();
 	}
 #endif
 

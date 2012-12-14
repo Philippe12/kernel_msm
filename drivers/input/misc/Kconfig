@@ -682,5 +682,11 @@ config INPUT_LIS3DH
           If you say yes here you get support for ST
           acceleration sensor LIS3DH.
 
+config SENSORS_TMD2771X
+	tristate "TAOS TMD2771X proximity and ambient light sensor"
+    depends on I2C=y
+	help
+	 If you say yes here you get support for TAOS TMD27711, TMD27713
+	 proximity and ambient light sensor.
 
 endif
