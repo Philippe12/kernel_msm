@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -105,7 +105,7 @@ static void gpio_bt_config(void)
 	if (machine_is_msm7627a_evb() || machine_is_msm8625_evb()
 				|| machine_is_msm8625_qrd5() || machine_is_msm7x27a_qrd5a())
 		gpio_bt_sys_rest_en = 16;
-	if(machine_is_msm8625q_skud() || machine_is_msm8625q_skue())
+	if(machine_is_msm8625q_skud() || machine_is_msm8625q_skue() || machine_is_msm8625q_evbd())
 		gpio_bt_sys_rest_en = 35;
 	if (machine_is_msm8625_qrd7())
 		gpio_bt_sys_rest_en = 88;
