@@ -914,26 +914,28 @@ static int __devinit tmd2771x_probe(struct i2c_client *client,
 	if (input_dev == NULL) {
 		err = -ENOMEM;
 		printk( "proximity input device allocate failed\n");
-		return err;
+		goto exit_kfree;
 	}
-        input_set_drvdata(input_dev, data);
+
+	input_set_drvdata(input_dev, data);
 	input_dev->name = "proximity";
 	input_set_capability(input_dev, EV_ABS, ABS_DISTANCE);
 	input_set_abs_params(input_dev, ABS_DISTANCE, 0, 1, 0, 0);
+	data->input_dev_ps = input_dev;
 
 	err = input_register_device(input_dev);
 	if (err) {
 		err = -ENOMEM;
 		printk("Unable to register input device ps: %s\n",
 		       input_dev->name);
-		return err;
+		goto exit_free_ps_dev;
 	}
-	data->input_dev_ps = input_dev;
+
 	err = sysfs_create_group(&input_dev->dev.kobj,
 				 &tmd2771x_ps_attr_group);
 	if (err) {
 		pr_err("%s: could not create sysfs group\n", __func__);
-		goto exit_unregister_dev_ps;
+		goto exit_unregister_ps_dev;
 	}
 
 	/* light */
@@ -941,39 +943,39 @@ static int __devinit tmd2771x_probe(struct i2c_client *client,
 	if (input_dev == NULL) {
 		err = -ENOMEM;
 		printk("light input device allocate failed\n");
-		return err;
+		goto exit_remove_ps_sysfs;
 	}
 	input_set_drvdata(input_dev, data);
 	input_dev->name = "light";
 	input_set_capability(input_dev, EV_ABS, ABS_MISC);
 	input_set_abs_params(input_dev, ABS_MISC, 0, 1, 0, 0);
+	data->input_dev_als = input_dev;
 
 	err = input_register_device(input_dev);
 	if (err) {
 		err = -ENOMEM;
 		printk("Unable to register input device als: %s\n",
 		       input_dev->name);
-		goto exit_free_dev_ps;
+		goto exit_free_als_dev;
 	}
-	data->input_dev_als = input_dev;
 	err = sysfs_create_group(&input_dev->dev.kobj,
 				 &tmd2771x_als_attr_group);
 	if (err) {
 		pr_err("%s: could not create sysfs group\n", __func__);
-		goto exit_unregister_dev_als;
+		goto exit_unregister_als_dev;
 	}
 	INIT_DELAYED_WORK(&data->dwork, tmd2771x_work_handler);
 	INIT_DELAYED_WORK(&data->als_dwork, tmd2771x_als_polling_work_handler);
 	/* Initialize the tmd2771x chip */
 	err = tmd2771x_init_client(client);
 	if (err)
-		goto exit_kfree;
+		goto exit_remove_als_sysfs;
 
 	err = request_threaded_irq(data->pdata->irq, NULL, tmd2771x_interrupt, IRQ_TYPE_EDGE_FALLING,
 		TMD2771X_DRV_NAME, (void *)client);
 	if (err) {
 		printk("%s Could not allocate irq(%d) !\n", __func__, data->pdata->irq);
-		goto exit_remove_sysfs;
+		goto exit_remove_als_sysfs;
 	}
 
 	device_init_wakeup(&client->dev, 1);
@@ -981,19 +983,20 @@ static int __devinit tmd2771x_probe(struct i2c_client *client,
 
 	return 0;
 
-exit_remove_sysfs:
-	sysfs_remove_group(&(data->input_dev_ps)->dev.kobj,
-                 &tmd2771x_ps_attr_group);
+exit_remove_als_sysfs:
 	sysfs_remove_group(&(data->input_dev_als)->dev.kobj,
                  &tmd2771x_als_attr_group);
-exit_unregister_dev_ps:
-	input_unregister_device(data->input_dev_ps);
-exit_free_dev_ps:
-	input_free_device(data->input_dev_ps);
-exit_unregister_dev_als:
+exit_unregister_als_dev:
 	input_unregister_device(data->input_dev_als);
-	input_free_device(input_dev);
+exit_free_als_dev:
 	input_free_device(data->input_dev_als);
+exit_remove_ps_sysfs:
+	sysfs_remove_group(&(data->input_dev_ps)->dev.kobj,
+                 &tmd2771x_ps_attr_group);
+exit_unregister_ps_dev:
+	input_unregister_device(data->input_dev_ps);
+exit_free_ps_dev:
+	input_free_device(data->input_dev_ps);
 exit_kfree:
 	wake_lock_destroy(&data->prx_wake_lock);
 	kfree(data);
@@ -1006,6 +1009,13 @@ static int __devexit tmd2771x_remove(struct i2c_client *client)
 	disable_irq(data->pdata->irq);
 	device_init_wakeup(&client->dev, 0);
 	cancel_delayed_work_sync(&data->als_dwork);
+	/* Power down the device */
+	tmd2771x_set_enable(client, 0);
+
+	sysfs_remove_group(&(data->input_dev_als)->dev.kobj,
+                 &tmd2771x_als_attr_group);
+	sysfs_remove_group(&(data->input_dev_ps)->dev.kobj,
+                 &tmd2771x_ps_attr_group);
 
 	input_unregister_device(data->input_dev_als);
 	input_unregister_device(data->input_dev_ps);
@@ -1013,14 +1023,7 @@ static int __devexit tmd2771x_remove(struct i2c_client *client)
 	input_free_device(data->input_dev_als);
 	input_free_device(data->input_dev_ps);
 
-	sysfs_remove_group(&(data->input_dev_ps)->dev.kobj,
-                 &tmd2771x_ps_attr_group);
-	sysfs_remove_group(&(data->input_dev_als)->dev.kobj,
-                 &tmd2771x_als_attr_group);
 	free_irq(data->pdata->irq, client);
-
-	/* Power down the device */
-	tmd2771x_set_enable(client, 0);
 
 	wake_lock_destroy(&data->prx_wake_lock);
 	kfree(data);
