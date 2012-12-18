@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2011-2012, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1994,7 +1994,7 @@ static void __init msm_cpr_init(void)
 	else if (msm8625_cpu_id() == MSM8625)
 		msm_cpr_pdata.max_freq = 1008000;
 
-	if (machine_is_qrd_skud_prime() || cpu_is_msm8625q())
+	if (cpu_is_msm8625q())
 		msm_cpr_pdata.step_size = 6250;
 
 	if (cpu_is_msm8625())
