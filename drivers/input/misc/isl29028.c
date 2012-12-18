@@ -427,11 +427,16 @@ static int to_lux(struct i2c_client *client,u16 data)
 }
 static void als_work_func(struct work_struct *work)
 {
-	u16 val;
+	u16 val,val2,val3;
 	int level=0;
 	struct isl29028_data *data = container_of(work,struct isl29028_data,als_work.work);
 
 	isl29028_als_read(data->client, &val);
+	msleep(500);
+	isl29028_als_read(data->client, &val2);
+	msleep(500);
+	isl29028_als_read(data->client, &val3);
+	val = (val + val2 + val3) / 3;
 	val = to_lux(data->client,val);
 	PR_DEB("@@@@@@@@@@@@@@@@als_data = %d\n",val);
 
