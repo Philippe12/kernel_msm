@@ -1237,7 +1237,7 @@ static struct resource gsbi1_msm8625_qup_i2c_resources[] = {
 struct platform_device msm8625_gsbi1_qup_i2c_device = {
 	.name		= "qup_i2c",
 	.id		= MSM_GSBI1_QUP_I2C_BUS_ID,
-	.num_resources	= ARRAY_SIZE(gsbi1_qup_i2c_resources),
+	.num_resources	= ARRAY_SIZE(gsbi1_msm8625_qup_i2c_resources),
 	.resource	= gsbi1_msm8625_qup_i2c_resources,
 };
 
