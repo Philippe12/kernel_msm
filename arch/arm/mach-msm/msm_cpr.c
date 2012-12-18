@@ -64,7 +64,7 @@ MODULE_PARM_DESC(enable, "CPR Enable");
 
 extern struct regulator *ncp6335d_handle;
 
-static int msm_cpr_debug_mask = 7;
+static int msm_cpr_debug_mask = 0; //disable cpr print info 7->0
 module_param_named(
 	debug_mask, msm_cpr_debug_mask, int, S_IRUGO | S_IWUSR
 );
