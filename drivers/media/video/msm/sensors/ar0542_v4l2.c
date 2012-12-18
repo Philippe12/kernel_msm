@@ -155,11 +155,33 @@ static struct msm_camera_i2c_reg_conf ar0542_snap_settings[] = {
 };
 
 static struct msm_camera_i2c_reg_conf ar0542_video_60fps_settings[] = {
-	//for 60fps setting, temporary no
+  {0x3004, 0x0008},/*x_addr_start*/
+  {0x3008, 0x0A01},/*x_addr_end*/
+  {0x3002, 0x0008},/*y_start_addr*/
+  {0x3006, 0x0781},/*y_addr_end*/
+  {0x3040, 0x09C7},/*read_mode*/
+  {0x034C, 0x0280},/*x_output_size*/
+  {0x034E, 0x01E0},/*y_output_size*/
+  {0x300C, 0x0CE6},/*line_length_pck*/
+  {0x300A, 0x022D},/*frame_length_lines*/
+  {0x3012, 0x022C},/*coarse_integration_time*/
+  {0x3014, 0x04EC},/*fine_integration_time*/
+  {0x3010, 0x00A0},/*fine_correction*/
 };
 
 static struct msm_camera_i2c_reg_conf ar0542_video_90fps_settings[] = {
-	//for 90ps setting, temporary no
+  {0x3004, 0x0008},/*x_addr_start*/
+  {0x3008, 0x0A01},/*x_addr_end*/
+  {0x3002, 0x0008},/*y_start_addr*/
+  {0x3006, 0x0781},/*y_addr_end*/
+  {0x3040, 0x09C7},/*read_mode*/
+  {0x034C, 0x0280},/*x_output_size*/
+  {0x034E, 0x01E0},/*y_output_size*/
+  {0x300C, 0x089A},/*line_length_pck*/
+  {0x300A, 0x022D},/*frame_length_lines*/
+  {0x3012, 0x022C},/*coarse_integration_time*/
+  {0x3014, 0x04EC},/*fine_integration_time*/
+  {0x3010, 0x00A0},/*fine_correction*/
 };
 
 static struct msm_camera_i2c_reg_conf ar0542_zsl_settings[] = {
@@ -379,21 +401,21 @@ static struct msm_sensor_output_info_t ar0542_output_settings[] = {
     .op_pixel_clk            = 55200000,
     .binning_factor          = 0x0,
   },
-  { /* For 60fps, not available now*/
+  { /* For 60fps*/
     .x_output                = 0x280,   /* 640 */
     .y_output                = 0x1E0,   /* 480  */
-    .line_length_pclk        = 0x73C,   /* 3312 */
-    .frame_length_lines      = 0x0457,   /* 1111 */
-    .vt_pixel_clk            = 110400000,/* =30.003*3312*1111 */
+    .line_length_pclk        = 0x0CE6,   /* 3302 */
+    .frame_length_lines      = 0x022D,   /* 557 */
+    .vt_pixel_clk            = 110400000,/* =60.026*3302*557 */
     .op_pixel_clk            = 55200000,
     .binning_factor          = 0x0,
   },
-  { /* For 90fps, not available now*/
-    .x_output                = 0x0510,   /* 1296 */
-    .y_output                = 0x03CC,   /* 972  */
-    .line_length_pclk        = 0x0CF0,   /* 3312 */
-    .frame_length_lines      = 0x0457,   /* 1111 */
-    .vt_pixel_clk            = 110400000,/* =30.003*3312*1111 */
+  { /* For 90fps*/
+    .x_output                = 0x280,   /* 640 */
+    .y_output                = 0x1E0,   /* 480  */
+    .line_length_pclk        = 0x089A,   /* 2202 */
+    .frame_length_lines      = 0x022D,   /* 557 */
+    .vt_pixel_clk            = 110400000,/* =90.0112*2202*557*/
     .op_pixel_clk            = 55200000,
     .binning_factor          = 0x0,
   },
@@ -476,6 +498,11 @@ static int32_t ar0542_write_prev_exp_gain(struct msm_sensor_ctrl_t *s_ctrl,
   uint16_t max_legal_gain = 0xE7F; //32x
   uint16_t min_legal_gain = 0x127; //1.584375x
   int32_t rc = 0;
+
+  if(s_ctrl->curr_res > MSM_SENSOR_RES_QTR &&
+    line > s_ctrl->msm_sensor_reg->output_settings[s_ctrl->curr_res].frame_length_lines)
+    line = s_ctrl->msm_sensor_reg->output_settings[s_ctrl->curr_res].frame_length_lines;
+
   if (gain < min_legal_gain) {
     CDBG("gain < min_legal_gain, gain = %d\n", gain);
     gain = min_legal_gain;
