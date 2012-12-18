@@ -1274,18 +1274,15 @@ void __init qrd7627a_add_io_devices(void)
 	/* keypad */
 	if (machine_is_msm8625_qrd5() || machine_is_msm7x27a_qrd5a())
 		kp_matrix_info_8625.keymap = keymap_8625_qrd5;
-
 	if (machine_is_msm7627a_evb() || machine_is_msm8625_evb() ||
 			machine_is_msm8625_qrd5() || machine_is_msm7x27a_qrd5a())
 		platform_device_register(&kp_pdev_8625);
 	else if (machine_is_msm7627a_qrd3() || machine_is_msm8625_qrd7())
 		platform_device_register(&kp_pdev_qrd3);
-	else if (machine_is_msm8625q_skud())
+	else if (machine_is_msm8625q_skud()||machine_is_msm8625q_evbd())
 		platform_device_register(&kp_pdev_skud);
 	else if (machine_is_msm8625q_skue())
 		platform_device_register(&kp_pdev_skue);
-
-	/* leds */
 
 	/* leds */
 	if (machine_is_msm7627a_evb() || machine_is_msm8625_evb()
