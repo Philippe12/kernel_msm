@@ -37,6 +37,7 @@
 #define GPIO_SKUD_CAM_1MP_PWDN 85
 #define GPIO_SKUD_CAM_LED_EN 34
 #define GPIO_SKUD_CAM_LED_FLASH_EN 48
+#define GPIO_SKUD_CAM_5MP_CAMID 127 /*CAMID*/
 
 #define GPIO_SKUE_CAM_5MP_SHDN_N 23
 #define GPIO_SKUE_CAM_5MP_CAMIF_RESET   79
@@ -1457,7 +1458,19 @@ static void skud_camera_gpio_cfg(void)
 	gpio_free(GPIO_SKUD_CAM_5MP_CAM_VCM_PWDN);
 	//=================================
 
+	//Fix CAMID leak current issue when phone sleep.
+	printk("gpio request: set CAMID GPIO to INPUT, now the gpio is %d\n", GPIO_SKUD_CAM_5MP_CAMID);
+	rc = gpio_request(GPIO_SKUD_CAM_5MP_CAMID, "ov5648");
+	if (rc < 0)
+		printk("%s: gpio_request GPIO %d : failed!", __func__, GPIO_SKUD_CAM_5MP_CAMID);
 
+	gpio_tlmm_config(GPIO_CFG(
+		GPIO_SKUD_CAM_5MP_CAMID,
+		0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP,
+		GPIO_CFG_2MA), GPIO_CFG_ENABLE);
+
+	//Free the gpio, only do tlmm config to input pull high here.
+	gpio_free(GPIO_SKUD_CAM_5MP_CAMID);
 }
 
 
