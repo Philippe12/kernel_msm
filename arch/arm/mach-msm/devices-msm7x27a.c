@@ -1243,6 +1243,18 @@ static struct resource gsbi1_msm8625_qup_i2c_resources[] = {
 		.end	= MSM8625_INT_ARM11_DMA,
 		.flags	= IORESOURCE_IRQ,
 	},
+	{
+		.name	= "i2c_clk",
+		.start	= 131,
+		.end	= 131,
+		.flags	= IORESOURCE_IO,
+	},
+	{
+		.name	= "i2c_sda",
+		.start	= 132,
+		.end	= 132,
+		.flags	= IORESOURCE_IO,
+	},
 };
 
 /* Use GSBI1 QUP for /dev/i2c-1 */

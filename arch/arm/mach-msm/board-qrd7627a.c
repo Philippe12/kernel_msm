@@ -42,6 +42,7 @@
 #include <asm/mach/arch.h>
 #include <asm/hardware/gic.h>
 #include <mach/board.h>
+#include <mach/gpiomux.h>
 #include <mach/msm_iomap.h>
 #include <mach/msm_hsusb.h>
 #include <mach/rpc_hsusb.h>
@@ -104,6 +105,32 @@ static struct msm_gpio qup_i2c_gpios_hw[] = {
 		"qup_sda" },
 };
 
+static int qrd_gpios_request_enable(const struct msm_gpio *table, int size)
+{
+	int i;
+	const struct msm_gpio *g;
+	struct gpiomux_setting setting;
+
+	int rc = msm_gpios_request(table, size);
+
+	if (!rc){
+		for (i = 0; i < size; i++) {
+			g = table + i;
+			/* use msm_gpiomux_write which can save old configuration */
+			setting.func = GPIO_FUNC(g->gpio_cfg);
+			setting.dir = GPIO_DIR(g->gpio_cfg);
+			setting.pull = GPIO_PULL(g->gpio_cfg);
+			setting.drv = GPIO_DRVSTR(g->gpio_cfg);
+			msm_gpiomux_write(GPIO_PIN(g->gpio_cfg), GPIOMUX_ACTIVE, &setting, NULL);
+			pr_debug("I2C pin %d func %d dir %d pull %d drvstr %d\n",
+				GPIO_PIN(g->gpio_cfg), GPIO_FUNC(g->gpio_cfg),
+				GPIO_DIR(g->gpio_cfg), GPIO_PULL(g->gpio_cfg),
+				GPIO_DRVSTR(g->gpio_cfg));
+		}
+	}
+	return rc;
+}
+
 static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
 {
 	int rc;
@@ -113,9 +140,9 @@ static void gsbi_qup_i2c_gpio_config(int adap_id, int config_type)
 
 	/* Each adapter gets 2 lines from the table */
 	if (config_type)
-		rc = msm_gpios_request_enable(&qup_i2c_gpios_hw[adap_id*2], 2);
+		rc = qrd_gpios_request_enable(&qup_i2c_gpios_hw[adap_id*2], 2);
 	else
-		rc = msm_gpios_request_enable(&qup_i2c_gpios_io[adap_id*2], 2);
+		rc = qrd_gpios_request_enable(&qup_i2c_gpios_io[adap_id*2], 2);
 	if (rc < 0)
 		pr_err("QUP GPIO request/enable failed: %d\n", rc);
 }
