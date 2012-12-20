@@ -617,6 +617,8 @@ static struct platform_device fmem_device = {
 
 #define GPIO_VREG_ID_EXT_2P85V	0
 #define GPIO_VREG_ID_EXT_1P8V	1
+#define GPIO_VREG_ID_EXT_2P85V_EVBD    2
+#define GPIO_VREG_ID_EXT_1P8V_EVBD     3
 
 static struct regulator_consumer_supply vreg_consumers_EXT_2P85V[] = {
 	REGULATOR_SUPPLY("cam_ov5647_avdd", "0-006c"),
@@ -654,10 +656,24 @@ static struct regulator_consumer_supply vreg_consumers_EXT_1P8V[] = {
 	REGULATOR_SUPPLY("cam_ar0542_vdd", "0-0064"),
 };
 
+static struct regulator_consumer_supply vreg_consumers_EXT_2P85V_EVBD[] = {
+	REGULATOR_SUPPLY("cam_ov5648_avdd", "0-006c"),
+	REGULATOR_SUPPLY("cam_ov7695_avdd", "0-0042"),
+	REGULATOR_SUPPLY("lcd_vdd", "mipi_dsi.1"),
+};
+
+static struct regulator_consumer_supply vreg_consumers_EXT_1P8V_EVBD[] = {
+	REGULATOR_SUPPLY("cam_ov5648_vdd", "0-006c"),
+	REGULATOR_SUPPLY("cam_ov7695_vdd", "0-0042"),
+	REGULATOR_SUPPLY("lcd_vddi", "mipi_dsi.1"),
+};
+
 /* GPIO regulator constraints */
 static struct gpio_regulator_platform_data msm_gpio_regulator_pdata[] = {
 	GPIO_VREG_INIT(EXT_2P85V, "ext_2p85v", "ext_2p85v_en", 35, 0),
 	GPIO_VREG_INIT(EXT_1P8V, "ext_1p8v", "ext_1p8v_en", 40, 0),
+        GPIO_VREG_INIT(EXT_2P85V_EVBD, "ext_2p85v_evbd", "ext_2p85v_evbd_en", 5, 0),
+        GPIO_VREG_INIT(EXT_1P8V_EVBD, "ext_1p8v_evbd", "ext_1p8v_evbd_en", 6, 0),
 };
 
 /* GPIO regulator */
@@ -677,6 +693,24 @@ static struct platform_device qrd_vreg_gpio_ext_1p8v __devinitdata = {
 		.platform_data =
 			&msm_gpio_regulator_pdata[GPIO_VREG_ID_EXT_1P8V],
 	},
+};
+
+static struct platform_device evbd_vreg_gpio_ext_2p85v __devinitdata = {
+        .name   = GPIO_REGULATOR_DEV_NAME,
+        .id     = 5,
+        .dev    = {
+                .platform_data =
+                        &msm_gpio_regulator_pdata[GPIO_VREG_ID_EXT_2P85V_EVBD],
+        },
+};
+
+static struct platform_device evbd_vreg_gpio_ext_1p8v __devinitdata = {
+        .name   = GPIO_REGULATOR_DEV_NAME,
+        .id     = 6,
+        .dev    = {
+                .platform_data =
+                        &msm_gpio_regulator_pdata[GPIO_VREG_ID_EXT_1P8V_EVBD],
+        },
 };
 
 /* Regulator configuration for the NCP6335D buck */
@@ -776,8 +810,16 @@ static struct platform_device *msm8625_evb_devices[] __initdata = {
 	&msm8625_device_otg,
 	&msm8625_device_gadget_peripheral,
 	&msm8625_kgsl_3d0,
-	&qrd_vreg_gpio_ext_2p85v,
-	&qrd_vreg_gpio_ext_1p8v,
+};
+
+static struct platform_device *msm8625_lcd_camera_devices[] __initdata = {
+        &qrd_vreg_gpio_ext_2p85v,
+        &qrd_vreg_gpio_ext_1p8v,
+};
+
+static struct platform_device *msm8625q_lcd_camera_devices[] __initdata = {
+        &evbd_vreg_gpio_ext_2p85v,
+        &evbd_vreg_gpio_ext_1p8v,
 };
 
 static unsigned pmem_kernel_ebi1_size = PMEM_KERNEL_EBI1_SIZE;
@@ -1095,6 +1137,13 @@ static void __init add_platform_devices(void)
 		platform_add_devices(qrd7627a_devices,
 				ARRAY_SIZE(qrd7627a_devices));
 	}
+
+        if (machine_is_msm8625_evb() || machine_is_msm8625_qrd5())
+                platform_add_devices(msm8625_lcd_camera_devices,
+                        ARRAY_SIZE(msm8625_lcd_camera_devices));
+        else if (machine_is_msm8625q_evbd())
+                platform_add_devices(msm8625q_lcd_camera_devices,
+                        ARRAY_SIZE(msm8625q_lcd_camera_devices));
 
 	if (machine_is_msm7627a_qrd3() || machine_is_msm7627a_evb())
 		platform_add_devices(qrd3_devices,

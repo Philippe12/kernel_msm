@@ -273,7 +273,7 @@ static int __devinit mipi_hx8389b_lcd_probe(struct platform_device *pdev)
 			spin_lock_init(&mipi_hx8389b_pdata->bl_spinlock);
 
                 /* SKUD use PWM as backlight control method */
-                if(machine_is_msm8625q_skud()) {
+                if(machine_is_msm8625q_skud() || machine_is_msm8625q_evbd()) {
                         mipi_hx8389b_bl_ctrl = 1;
                 }
 
