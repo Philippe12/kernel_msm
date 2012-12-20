@@ -2174,10 +2174,11 @@ int __init msm7x2x_misc_init(void)
 		msm_acpuclock_init(1);
 		platform_device_register(&msm8625q_device_acpuclk);
 	} else if (cpu_is_msm8625()) {
-		if (machine_is_msm8625q_skud()) {
-			msm_acpuclock_init(0);
-			platform_device_register(&msm8625q_device_acpuclk);
-		} else if (msm8625_cpu_id() == MSM8625)
+		//if (machine_is_msm8625q_skud()) {
+		//	msm_acpuclock_init(0);
+		//	platform_device_register(&msm8625q_device_acpuclk);
+		//} else
+		if (msm8625_cpu_id() == MSM8625)
 			platform_device_register(&msm7x27aa_device_acpuclk);
 		else if (msm8625_cpu_id() == MSM8625A)
 			platform_device_register(&msm8625_device_acpuclk);
