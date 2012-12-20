@@ -278,6 +278,15 @@ static struct i2c_board_info isl29028_i2c_info[] __initdata = {
 };
 #endif
 
+#ifdef CONFIG_INPUT_LTR558
+/* LTR558 BUS ID 0x23 */
+static struct i2c_board_info ltr558_i2c_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("ltr558", 0x23),
+	},
+};
+#endif
+
 #if defined(CONFIG_I2C) && defined(CONFIG_INPUT_LTR502)
 
 static struct ltr502_platform_data ltr502_pdata = {
@@ -443,6 +452,15 @@ void __init msm7627a_sensor_init(void)
 		i2c_register_board_info(MSM_GSBI0_QUP_I2C_BUS_ID,
 					isl29028_i2c_info,
 					ARRAY_SIZE(isl29028_i2c_info));
+	}
+#endif
+
+#ifdef CONFIG_INPUT_LTR558
+	if (machine_is_msm8625q_skue()) {
+		pr_info("i2c_register_board_info LTR558 ALP sensor!\n");
+		i2c_register_board_info(MSM_GSBI1_QUP_I2C_BUS_ID,
+					ltr558_i2c_info,
+					ARRAY_SIZE(ltr558_i2c_info));
 	}
 #endif
 
