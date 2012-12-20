@@ -55,7 +55,7 @@ static int __init fb_size_setup(char *p)
 
 early_param("fb_size", fb_size_setup);
 
-static uint32_t lcdc_truly_gpio_initialized;
+static uint32_t lcdc_truly_gpio_initialized = 0;
 static struct regulator_bulk_data regs_truly_lcdc[] = {
 	{ .supply = "rfrx1",   .min_uV = 1800000, .max_uV = 1800000 },
 };
@@ -326,7 +326,8 @@ static struct regulator_bulk_data regs_lcdc[] = {
 	{ .supply = "gp2",   .min_uV = 2850000, .max_uV = 2850000 },
 	{ .supply = "msme1", .min_uV = 1800000, .max_uV = 1800000 },
 };
-static uint32_t lcdc_gpio_initialized;
+
+static uint32_t lcdc_gpio_initialized = 0;
 
 static void lcdc_toshiba_gpio_init(void)
 {
@@ -1088,7 +1089,7 @@ static int msm_fb_dsi_client_skue_reset(void)
 {
 	int rc = 0;
 
-        pr_debug("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 
 	rc = gpio_request(GPIO_SKUE_LCD_BRDG_RESET_N, "skue_lcd_brdg_reset_n");
 	if (rc < 0) {
@@ -1125,7 +1126,7 @@ static struct regulator_bulk_data regs_dsi[] = {
 	{ .supply = "msme1", .min_uV = 1800000, .max_uV = 1800000 },
 };
 
-static int dsi_gpio_initialized;
+static int dsi_gpio_initialized = 0;
 
 static int mipi_dsi_panel_msm_power(int on)
 {
@@ -1417,7 +1418,7 @@ static int mipi_dsi_panel_qrd3_power(int on)
 	return rc;
 }
 
-static int skud_dsi_gpio_initialized;
+static int skud_dsi_gpio_initialized = 0;
 static int mipi_dsi_panel_skud_power(int on)
 {
 	int rc = 0;
@@ -1479,14 +1480,14 @@ static int mipi_dsi_panel_skud_power(int on)
 	return rc;
 }
 
-static int skue_dsi_gpio_initialized;
+static int skue_dsi_gpio_initialized = 0;
 static int mipi_dsi_panel_skue_power(int on)
 {
 	int rc = 0;
 
         pr_debug("%s: on = %d\n", __func__, on);
 
-	if (!skud_dsi_gpio_initialized) {
+	if (!skue_dsi_gpio_initialized) {
 		pmapp_disp_backlight_init();
 
 		skue_dsi_gpio_initialized = 1;
@@ -1535,8 +1536,10 @@ static int mipi_dsi_panel_skue_power(int on)
 		msleep(20);
 
 	} else {
-                /*Pull down Reset GPIO*/
-		gpio_set_value_cansleep(GPIO_SKUE_LCD_BRDG_RESET_N, 0);
+			/*Pull down Reset GPIO*/
+			gpio_tlmm_config(GPIO_CFG(GPIO_SKUE_LCD_BRDG_RESET_N, 0,
+						 GPIO_CFG_INPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+						 GPIO_CFG_DISABLE);
 	}
 
 	return rc;
