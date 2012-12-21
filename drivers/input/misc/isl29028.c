@@ -279,7 +279,7 @@ static void sysfs_enable_als(int enable)
 		if(atomic_read(&data->als_working)){
 			PR_DEB("Enter SYSFS_DIS_ALS\n");
 			atomic_set(&data->als_working,0);
-			cancel_delayed_work_sync(&data->als_work);
+			cancel_delayed_work(&data->als_work);
 			isl29028_disable_als(data->client);
 		}else{
 			PR_DEB("Als thread has not running already\n");		
@@ -456,7 +456,8 @@ static void als_work_func(struct work_struct *work)
 		pre_lux_level =level;
 	}
 	PR_DEB("als-msecs=%d\n",(int)msecs_to_jiffies(data->als_interval));
-	queue_delayed_work(wq, &data->als_work,msecs_to_jiffies(data->als_interval));
+	if(atomic_read(&data->als_working))
+		queue_delayed_work(wq, &data->als_work,msecs_to_jiffies(data->als_interval));
 }
 
 /* isl290828 reset*/
