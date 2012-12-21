@@ -49,6 +49,9 @@
 #define GPIO_SKU7_CAM_VGA_SHDN    91
 #define GPIO_SKU7_CAM_5MP_SHDN_N   93         /* PWDN */
 #define GPIO_SKU7_CAM_5MP_CAMIF_RESET   23   /* (board_is(EVT))?123:121 RESET */
+
+#define GPIO_SKUE_CAM_VGA_SHDN    85
+
 #define GPIO_NOT_CONFIGURED -1
 #define MOUNT_ANGLE_NOT_CONFIGURED -1
 //for qrd7 camera gpio
@@ -452,6 +455,54 @@ static struct msm_camera_sensor_info msm_camera_sensor_ov7695_raw_data = {
 	.csi_if		 = 1,
 	.camera_type = FRONT_CAMERA_2D,
 	.sensor_type = BAYER_SENSOR,
+};
+#endif
+
+#ifdef CONFIG_MT9V115
+static struct gpio mt9v115_cam_req_gpio[] = {
+	{GPIO_SKUE_CAM_VGA_SHDN, GPIOF_DIR_OUT, "CAM_VGA_SHDN"},
+};
+
+static struct msm_gpio_set_tbl mt9v115_cam_gpio_set_tbl[] = {
+	{GPIO_SKUE_CAM_VGA_SHDN, GPIOF_OUT_INIT_HIGH, 5000},
+	{GPIO_SKUE_CAM_VGA_SHDN, GPIOF_OUT_INIT_LOW, 10000},
+};
+static struct msm_camera_gpio_conf gpio_conf_mt9v115 = {
+	.cam_gpio_req_tbl = mt9v115_cam_req_gpio,
+	.cam_gpio_req_tbl_size = ARRAY_SIZE(mt9v115_cam_req_gpio),
+	.cam_gpio_set_tbl = mt9v115_cam_gpio_set_tbl,
+	.cam_gpio_set_tbl_size = ARRAY_SIZE(mt9v115_cam_gpio_set_tbl),
+	.camera_off_table = camera_off_gpio_table,
+	.camera_on_table = camera_on_gpio_table,
+	.gpio_no_mux = 1,
+};
+
+static struct camera_vreg_t mt9v115_gpio_vreg[] = {
+	{"ldo12", REG_LDO, 2700000, 3300000, 0},
+	{"smps3", REG_LDO, 1800000, 1800000, 0},
+};
+static struct msm_camera_sensor_platform_info sensor_board_info_mt9v115 = {
+	.mount_angle = 90,
+	.cam_vreg = msm_cam_vreg,
+	.num_vreg = ARRAY_SIZE(msm_cam_vreg),
+	.gpio_conf = &gpio_conf_mt9v115,
+};
+
+static struct msm_camera_sensor_flash_data flash_mt9v115 = {
+	.flash_type     = MSM_CAMERA_FLASH_NONE,
+};
+
+static struct msm_camera_sensor_info msm_camera_sensor_mt9v115_data = {
+	.sensor_name	    = "mt9v115",
+	.sensor_reset_enable    = 0,
+	.sensor_reset	   = GPIO_NOT_CONFIGURED,
+	.sensor_pwd	     = GPIO_NOT_CONFIGURED,
+	.pdata			= &msm_camera_device_data_csi0[0],
+	.flash_data	     = &flash_mt9v115,
+	.sensor_platform_info   = &sensor_board_info_mt9v115,
+	.csi_if		 = 1,
+	.camera_type = FRONT_CAMERA_2D,
+	.sensor_type = YUV_SENSOR,
 };
 #endif
 
@@ -885,6 +936,10 @@ static void __init msm7x27a_init_cam(void)
 		sensor_board_info_ov7695.cam_vreg = NULL;
 		sensor_board_info_ov7695.num_vreg = 0;
 #endif
+#ifdef CONFIG_MT9V115
+		sensor_board_info_mt9v115.cam_vreg = NULL;
+		sensor_board_info_mt9v115.num_vreg = 0;
+#endif
 #ifdef CONFIG_OV7695_RAW
 		sensor_board_info_ov7695_raw.cam_vreg = NULL;
 		sensor_board_info_ov7695_raw.num_vreg = 0;
@@ -1033,9 +1088,16 @@ static void __init msm7x27a_init_cam(void)
 		sensor_board_info_ov7695_raw.gpio_conf = &skud_gpio_conf_ov7695_raw;
 		sensor_board_info_ov7695_raw.mount_angle = 270;
 #endif
-	}
-	else if(machine_is_msm8625q_skue())
-	{
+	}else if(machine_is_msm8625q_skue()) {
+#ifdef CONFIG_MT9V115
+		sensor_board_info_mt9v115.cam_vreg = mt9v115_gpio_vreg;
+		sensor_board_info_mt9v115.num_vreg = ARRAY_SIZE(mt9v115_gpio_vreg);
+		msm_camera_sensor_mt9v115_data.vcm_pwd = 0;
+		msm_camera_sensor_mt9v115_data.vcm_enable = 0;
+		msm_camera_sensor_mt9v115_data.sensor_pwd = GPIO_SKUE_CAM_VGA_SHDN;
+		sensor_board_info_mt9v115.gpio_conf = &gpio_conf_mt9v115;
+		sensor_board_info_mt9v115.mount_angle = 270;
+#endif
 #ifdef CONFIG_AR0542
 		sensor_board_info_ar0542.cam_vreg = ar0542_gpio_vreg;
 		sensor_board_info_ar0542.num_vreg = ARRAY_SIZE(ar0542_gpio_vreg);
@@ -1180,6 +1242,12 @@ static struct i2c_board_info i2c_camera_devices_skue[] = {
 	{
 		I2C_BOARD_INFO("ar0542", 0x64),
 		.platform_data = &msm_camera_sensor_ar0542_data,
+	},
+#endif
+#ifdef CONFIG_MT9V115
+	{
+		I2C_BOARD_INFO("mt9v115", 0x7a),
+		.platform_data = &msm_camera_sensor_mt9v115_data,
 	},
 #endif
 };

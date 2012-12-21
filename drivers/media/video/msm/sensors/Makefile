@@ -19,6 +19,7 @@ obj-$(CONFIG_OV5648_TRULY_CM8352) += ov5648_truly_cm8352_v4l2.o
 obj-$(CONFIG_OV7692) += ov7692_v4l2.o
 obj-$(CONFIG_OV7695) += ov7695_v4l2.o
 obj-$(CONFIG_OV7695_RAW) += ov7695_raw_v4l2.o
+obj-$(CONFIG_MT9V115) += mt9v115_v4l2.o
 obj-$(CONFIG_VX6953) += vx6953.o
 obj-$(CONFIG_AR0543) += ar0543_v4l2.o
 obj-$(CONFIG_A8140) += a8140_v4l2.o

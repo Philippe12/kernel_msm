@@ -338,3 +338,9 @@ config OV7695_RAW
 	default n
 	---help---
 	  Omni Vision BAYER Sensor for QRD Devices
+config MT9V115
+	bool "Sensor mt9v115 (BAYER 3M)"
+	depends on MSM_CAMERA && MSM_CAMERA_V4L2
+	default n
+	---help---
+	  MICRON 3M YUV Sensor for QRD Devices
