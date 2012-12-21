@@ -541,15 +541,13 @@ static struct platform_driver this_driver = {
 
 static void mipi_otm9605a_set_backlight(struct msm_fb_data_type *mfd)
 {
-        int bl_level = mfd->bl_level;
+	int bl_level = mfd->bl_level;
 
 	pr_debug("%s: bl_level = %d\n", __func__, bl_level);
 
-        bl_level = mfd->panel_info.bl_max - bl_level;
+	mipi_otm9605a_pdata->backlight(bl_level, 1);
 
-        mipi_otm9605a_pdata->backlight(bl_level, 1);
-
-        return;
+	return;
 }
 
 static struct msm_fb_panel_data otm9605a_panel_data = {
