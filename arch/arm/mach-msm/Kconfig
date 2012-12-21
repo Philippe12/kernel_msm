@@ -301,6 +301,7 @@ config ARCH_MSM8625
 	select MSM_RUN_QUEUE_STATS
 	select MIGHT_HAVE_CACHE_L2X0
 	select ARM_HAS_SG_CHAIN
+	select CPU_HAS_L2_PMU
 
 config ARCH_MSM9625
 	bool "MSM9625"
@@ -413,6 +414,7 @@ config ARCH_MSM7X27A
 	select MIGHT_HAVE_CACHE_L2X0
 	select ARM_HAS_SG_CHAIN
 	select MSM_FIQ_SUPPORT
+	select CPU_HAS_L2_PMU
 
 config  MSM_VIC
 	bool
@@ -1336,7 +1338,8 @@ config MSM_RPC_SDIO_XPRT
 	help
 	  SDIO Transport Layer for RPC Rouer
 
-config MSM_RPC_SDIO_DEBUG
+	  config MSM_RPC_SDIO_DEBUG
+
 	depends on MSM_RPC_SDIO_XPRT
 	default y
 	bool "MSM SDIO XPRT debug support"
