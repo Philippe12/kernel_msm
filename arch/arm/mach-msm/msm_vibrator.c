@@ -131,7 +131,8 @@ static void timed_vibrator_off(struct timed_output_dev *sdev)
 
 static void update_vibrator(struct work_struct *work)
 {
-        set_pmic_vibrator(vibe_state);
+	printk("%s: turn on/off vibrator,vibe_state = %d \n",__func__,vibe_state);
+	set_pmic_vibrator(vibe_state);
 }
 
 
@@ -157,6 +158,7 @@ static void vibrator_enable(struct timed_output_dev *dev, int value)
 	spin_unlock_irqrestore(&vibe_lock, flags);
 
         schedule_work(&work_vibrator);
+	printk("%s: vibe_state = %d, value = %d, schedule to turn on/off vibrator because of app call \n", __func__, vibe_state, value);
 
 }
 
@@ -174,6 +176,7 @@ static enum hrtimer_restart vibrator_timer_func(struct hrtimer *timer)
 {
 	vibe_state = 0;
 	schedule_work(&work_vibrator);
+	printk("%s: vibe_state = %d , schedule to turn off vibrator because timeout \n",__func__,vibe_state);
 	return HRTIMER_NORESTART;
 }
 
