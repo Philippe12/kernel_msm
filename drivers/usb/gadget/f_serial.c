@@ -947,6 +947,9 @@ int gser_bind_config(struct usb_configuration *c, u8 port_num)
 	gser->port.disconnect = gser_disconnect;
 	gser->port.send_break = gser_send_break;
 #endif
+	if (gser->transport == USB_GADGET_XPORT_SMD) {
+		gsmd_set_smd_port(&gser->port);
+	}
 
 	status = usb_add_function(c, &gser->port.func);
 	if (status)
