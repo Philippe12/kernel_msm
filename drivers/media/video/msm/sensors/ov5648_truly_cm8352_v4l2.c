@@ -1807,9 +1807,9 @@ static int32_t ov5648_truly_cm8352_write_prev_exp_gain(struct msm_sensor_ctrl_t 
 	{
 		s_ctrl->func_tbl->sensor_group_hold_on(s_ctrl);
 		/* adjust frame rate */
-		if (line > fl_lines)
+		if (line > (fl_lines - offset))
 		{
-			line = fl_lines;
+			line = fl_lines - offset;
 		}
 
 		line = line<<4;
