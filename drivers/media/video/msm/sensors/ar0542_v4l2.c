@@ -37,73 +37,53 @@
 #define CDBG_HIGH(fmt, args...) printk(fmt, ##args)
 #endif
 
+static uint16_t ar0542_prev_exp_gain = 0x012A;
+static uint16_t ar0542_prev_exp_line = 0x07E4;
 struct ar0542_otp_struct {
   uint16_t Module_info_0;   /* Year                               */
   uint16_t Module_info_1;   /* Date                               */
-  uint16_t Module_info_2;   /* Bit[15:12]:Vendor                  */
-                            /* Bit[11:8]:Version                  */
-                            /* Bit[7:0]:Reserve                   */
-  uint16_t Module_info_3;   /* Reserve by customer                */
-  uint16_t Lens_type;       /* Lens Type,defined by customer      */
-  uint16_t Vcm_type;        /* VCM Type,defined by customer       */
-  uint16_t Driver_ic_type;  /* Driver IC Type,defined by customer */
-  uint16_t Color_temp_type; /* Color Temperature Type             */
-                            /* 00: Day Light                      */
-                            /* 01: CWF Light                      */
-                            /* 02: A Light                        */
+  uint16_t Module_info_2;   /* MID                                */
+  uint16_t Reserve_0;       /* Reserved                           */
   uint16_t R_Gr;            /* AWB information, R/Gr              */
   uint16_t B_Gr;            /* AWB information, B/Gr              */
   uint16_t Gb_Gr;           /* AWB information, Gb/Gr             */
-  uint16_t Golden_R_G;      /* AWB information                    */
-  uint16_t Golden_B_G;      /* AWB information                    */
-  uint16_t Current_R_G;     /* AWB information                    */
-  uint16_t Current_B_G;     /* AWB information                    */
-  uint16_t Reserve_0;       /* Reserve for AWB information        */
+  uint16_t Reserve_1;       /* Reserved                           */
+  uint16_t LSC_data[106];   /* LSC Data                           */
+  uint16_t Reserve_2;       /* Reserved                           */
   uint16_t AF_infinity;     /* AF information                     */
   uint16_t AF_macro;        /* AF information                     */
-  uint16_t Reserve_1;       /* Reserve for AF information         */
-  uint16_t Reserve_2;       /* Reserve                            */
-  uint16_t LSC_data[106];   /* LSC Data                           */
+  uint16_t AF_data;         /* AF information                     */
+  uint16_t OTP_flag_0;      /* OTP_flag information               */
+  uint16_t OTP_flag_1;      /* OTP_flag information               */
 } st_ar0542_otp = {
   0x07dc,                   /* Year                               */
-  0x0801,                   /* Date                               */
-  0x0000,                   /* Bit[15:12]:Vendor                  */
-                            /* Bit[11:8]:Version                  */
-                            /* Bit[7:0]:Reserve                   */
-  0x0000,                   /* Reserve by customer                */
-  0x0000,                   /* Lens Type,defined by customer      */
-  0x0000,                   /* VCM Type,defined by customer       */
-  0x0000,                   /* Driver IC Type,defined by customer */
-  0x0000,                   /* Color Temperature Type             */
-                            /* 00: Day Light                      */
-                            /* 01: CWF Light                      */
-                            /* 02: A Light                        */
-  0x0249,                   /* AWB information, R/Gr              */
-  0x01f8,                   /* AWB information, B/Gr              */
-  0x03b8,                   /* AWB information, Gb/Gr             */
-  0x0268,                   /* AWB information                    */
-  0x0201,                   /* AWB information                    */
-  0x025e,                   /* AWB information                    */
-  0x020b,                   /* AWB information                    */
-  0x0000,                   /* Reserve for AWB information        */
-  0x0000,                   /* AF information                     */
-  0x0000,                   /* AF information                     */
-  0x0000,                   /* Reserve for AF information         */
-  0x0001,                   /* Reserve                            */
+  0x03f9,                   /* Date                               */
+  0x000a,                   /* MID                                */
+  0x0000,                   /* Reserved                           */
+  0x0271,                   /* AWB information, R/Gr              */
+  0x0236,                   /* AWB information, B/Gr              */
+  0x0400,                   /* AWB information, Gb/Gr             */
+  0x0000,                   /* Reserved                           */
                             /* LSC Data                           */
   {
-    0x20b0,0x6809,0x72b0,0xf7ad,0xfb31,0x2190,0x9e0d,0x28d0,0x0f2f,0xbfb1,
-    0x2090,0xcbca,0x774d,0xc52e,0xc0d0,0x26b0,0x8c2e,0x10f1,0x0c4f,0x9f12,
-    0xcb0b,0xabcd,0xc4cd,0x828c,0x0e10,0x8bc9,0x334e,0x4dce,0xd68e,0xc20e,
-    0x0a4c,0x294e,0x418e,0xa74f,0xca4f,0x040d,0xa06f,0x162f,0x2750,0xbdf0,
-    0x16d1,0x162f,0xe6d3,0x8cd1,0x0ff4,0x2811,0x196f,0xdb73,0xfc11,0x0f14,
-    0x3e50,0x1f0f,0xa2b3,0xee4e,0x78d3,0x1891,0x77af,0x8714,0xff11,0x44d4,
-    0x76ee,0x83ee,0x6730,0x2391,0x9153,0x4eaf,0xb72e,0x9cb0,0x1c6f,0xecb1,
-    0x24ac,0xf90e,0x99ee,0x4130,0xeeaf,0xc16b,0x4b70,0x8e50,0xc571,0x3ff0,
-    0xbed2,0xf8d0,0x3513,0x0192,0x7b34,0xcb72,0xebcf,0x4613,0x54b1,0x4a54,
-    0xa7b2,0xda90,0x6a53,0x1cee,0x1693,0xc932,0x8a90,0x7ef3,0x0511,0x27b4,
-    0x051c,0x03a0,0x206c,0x080c,0x272c,0x6f2b
-  }
+    0x0170,0x144c,0x7f50,0x9ded,0xe830,0x0130,0x8dea,0x0a51,0x778d,0x87f1,
+    0x00d0,0x204b,0x798f,0x838e,0xc9af,0x00f0,0x8e89,0x0991,0x6845,0x8a31,
+    0x852b,0x87ae,0xa7af,0x742c,0x17d0,0x14eb,0x59ed,0xe0ce,0xbcae,0x1baf,
+    0x17ac,0x4bed,0xab0b,0xac0e,0x9c69,0x50ca,0x972e,0xf78c,0x654c,0x4dec,
+    0x01d1,0xa5ab,0x8591,0x53ac,0xfa31,0x2751,0xc14e,0x8271,0x9650,0xbbd2,
+    0x4230,0xe50c,0xf9ef,0x74af,0xd131,0x74f0,0xad8e,0x90d1,0xde2d,0xab11,
+    0xc26e,0xdc8c,0x6e2f,0x1550,0xabf1,0x1168,0x9cce,0xa28f,0x0e10,0xd20e,
+    0xc60e,0xd6ce,0x150f,0x6f6f,0x9451,0x838f,0x67cd,0x07cf,0x6bcf,0x89f1,
+    0xde70,0xe50e,0xbfd3,0x2631,0x6b55,0x8031,0xb86e,0x9074,0x5ab2,0x1196,
+    0xb990,0x95ef,0xb193,0x7a70,0x4515,0xb910,0x0e8c,0xcdf3,0x0972,0x6635,
+    0x0530,0x03c8,0x200b,0x16cc,0x326c,0x2d2b,
+  },
+  0xffff,                   /* Reserved                           */
+  0x0000,                   /* AF information                     */
+  0x0000,                   /* AF information                     */
+  0x0000,                   /* AF information                     */
+  0xffff,                   /* OTP_flag information               */
+  0xffff,                   /* OTP_flag information               */
 };
 
 static struct msm_sensor_ctrl_t ar0542_s_ctrl;
@@ -511,6 +491,8 @@ static int32_t ar0542_write_prev_exp_gain(struct msm_sensor_ctrl_t *s_ctrl,
     CDBG("gain > max_legal_gain, gain = %d\n", gain);
     gain = max_legal_gain;
   }
+  ar0542_prev_exp_gain = gain;
+  ar0542_prev_exp_line = line;
   CDBG("%s gain = 0x%x (%d)\n", __func__,gain,gain);
   CDBG("%s line = 0x%x (%d)\n", __func__,line,line);
   s_ctrl->func_tbl->sensor_group_hold_on(s_ctrl);
@@ -599,6 +581,8 @@ int32_t ar0542_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
   usleep_range(5000, 5100);
   msm_sensor_power_down(s_ctrl);
   msleep(40);
+  ar0542_prev_exp_gain = 0x012A;
+  ar0542_prev_exp_line = 0x07E4;
   CDBG("%s: X\n",__func__);
   return 0;
 }
@@ -655,6 +639,8 @@ int ar0542_check_otp_status(struct msm_sensor_ctrl_t *s_ctrl, int otp_type)
 {
   uint16_t i = 0;
   uint16_t temp = 0;
+  uint16_t temp_otp_flag0 = 0;
+  uint16_t temp_otp_flag1 = 0;
   msm_camera_i2c_write(s_ctrl->sensor_i2c_client,0x301A,0x0610,
     MSM_CAMERA_I2C_WORD_DATA);
   msm_camera_i2c_write(s_ctrl->sensor_i2c_client,0x3134,0xCD95,
@@ -677,15 +663,19 @@ int ar0542_check_otp_status(struct msm_sensor_ctrl_t *s_ctrl, int otp_type)
     i++;
   }while(i < 10);
 
-  msm_camera_i2c_read(s_ctrl->sensor_i2c_client,0x3800,&temp,
+  msm_camera_i2c_read(s_ctrl->sensor_i2c_client,0x38EC,&temp_otp_flag0,
+    MSM_CAMERA_I2C_WORD_DATA);
+  msm_camera_i2c_read(s_ctrl->sensor_i2c_client,0x38EE,&temp_otp_flag1,
     MSM_CAMERA_I2C_WORD_DATA);
 
-  if(0==temp){
-    //OTPM have no valid data
-    return 0;
-  }else{
+  if((0xFFFF==temp_otp_flag0)&&(0xFFFF==temp_otp_flag1)){
     //OTPM have valid data
+    CDBG("%s: otp_type = 0x%02x, OTPM have valid data\n",__func__,otp_type);
     return 1;
+  }else{
+    //OTPM have no valid data
+    CDBG("%s: otp_type = 0x%02x, OTPM have no valid data\n",__func__,otp_type);
+    return 0;
   }
 }
 
@@ -698,25 +688,36 @@ int ar0542_read_otp(struct msm_sensor_ctrl_t *s_ctrl, struct ar0542_otp_struct *
 {
   uint16_t i = 0;
   int otp_status = 0;//initial OTPM have no valid data status
-  if(ar0542_check_otp_status(s_ctrl,0x31)){
-    //type 0x31 have valid data, now need check type 0x32
-    if(ar0542_check_otp_status(s_ctrl,0x32)){
-      //type 0x32 have valid data, need use type 0x32
-      otp_status = 1;
-    }else{
-      //type 0x32 have no valid data, need use type 0x31
-      otp_status = 1;
-      // use check function switch to type 0x31
-      ar0542_check_otp_status(s_ctrl,0x31);
-    }
+  if(ar0542_check_otp_status(s_ctrl,0x35)){
+    //type 0x35 have valid data, now use type 0x35
+    otp_status = 1;
   }else{
-    //type 0x31 have no valid data, now need check type 0x30
-    if(ar0542_check_otp_status(s_ctrl,0x30)){
-      //type 0x30 have valid data, need use type 0x30
+    if(ar0542_check_otp_status(s_ctrl,0x34)){
+      //type 0x34 have valid data, now use type 0x34
       otp_status = 1;
     }else{
-      //type 0x30 have no valid data, no otp data
-      ;
+      if(ar0542_check_otp_status(s_ctrl,0x33)){
+        //type 0x33 have valid data, now use type 0x33
+        otp_status = 1;
+      }else{
+        if(ar0542_check_otp_status(s_ctrl,0x32)){
+          //type 0x32 have valid data, now use type 0x32
+          otp_status = 1;
+        }else{
+          if(ar0542_check_otp_status(s_ctrl,0x31)){
+            //type 0x31 have valid data, now use type 0x31
+            otp_status = 1;
+          }else{
+            if(ar0542_check_otp_status(s_ctrl,0x30)){
+              //type 0x30 have valid data, now use type 0x30
+              otp_status = 1;
+            }else{
+              //all types 0x35-0x30 have no valid data, no otp data
+              ;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -729,132 +730,126 @@ int ar0542_read_otp(struct msm_sensor_ctrl_t *s_ctrl, struct ar0542_otp_struct *
     CDBG("%s: have no valid otp data\n",__func__);
   }
 #if 0
-  CDBG("%s: Module_info_0   = 0x%04x (%d)\n",__func__,p_otp->Module_info_0,   p_otp->Module_info_0);
-  CDBG("%s: Module_info_1   = 0x%04x (%d)\n",__func__,p_otp->Module_info_1,   p_otp->Module_info_1);
-  CDBG("%s: Module_info_2   = 0x%04x (%d)\n",__func__,p_otp->Module_info_2,   p_otp->Module_info_2);
-  CDBG("%s: Module_info_3   = 0x%04x (%d)\n",__func__,p_otp->Module_info_3,   p_otp->Module_info_3);
-  CDBG("%s: Lens_type       = 0x%04x (%d)\n",__func__,p_otp->Lens_type,       p_otp->Lens_type);
-  CDBG("%s: Vcm_type        = 0x%04x (%d)\n",__func__,p_otp->Vcm_type,        p_otp->Vcm_type);
-  CDBG("%s: Driver_ic_type  = 0x%04x (%d)\n",__func__,p_otp->Driver_ic_type,  p_otp->Driver_ic_type);
-  CDBG("%s: Color_temp_type = 0x%04x (%d)\n",__func__,p_otp->Color_temp_type, p_otp->Color_temp_type);
-  CDBG("%s: R_Gr            = 0x%04x (%d)\n",__func__,p_otp->R_Gr,            p_otp->R_Gr);
-  CDBG("%s: B_Gr            = 0x%04x (%d)\n",__func__,p_otp->B_Gr,            p_otp->B_Gr);
-  CDBG("%s: Gb_Gr           = 0x%04x (%d)\n",__func__,p_otp->Gb_Gr,           p_otp->Gb_Gr);
-  CDBG("%s: Golden_R_G      = 0x%04x (%d)\n",__func__,p_otp->Golden_R_G,      p_otp->Golden_R_G);
-  CDBG("%s: Golden_B_G      = 0x%04x (%d)\n",__func__,p_otp->Golden_B_G,      p_otp->Golden_B_G);
-  CDBG("%s: Current_R_G     = 0x%04x (%d)\n",__func__,p_otp->Current_R_G,     p_otp->Current_R_G);
-  CDBG("%s: Current_B_G     = 0x%04x (%d)\n",__func__,p_otp->Current_B_G,     p_otp->Current_B_G);
-  CDBG("%s: Reserve_0       = 0x%04x (%d)\n",__func__,p_otp->Reserve_0,       p_otp->Reserve_0);
-  CDBG("%s: AF_infinity     = 0x%04x (%d)\n",__func__,p_otp->AF_infinity,     p_otp->AF_infinity);
-  CDBG("%s: AF_macro        = 0x%04x (%d)\n",__func__,p_otp->AF_macro,        p_otp->AF_macro);
-  CDBG("%s: Reserve_1       = 0x%04x (%d)\n",__func__,p_otp->Reserve_1,       p_otp->Reserve_1);
-  CDBG("%s: Reserve_2       = 0x%04x (%d)\n",__func__,p_otp->Reserve_2,       p_otp->Reserve_2);
-  CDBG("%s: LSC_data[0]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[0],     p_otp->LSC_data[0]);
-  CDBG("%s: LSC_data[1]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[1],     p_otp->LSC_data[1]);
-  CDBG("%s: LSC_data[2]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[2],     p_otp->LSC_data[2]);
-  CDBG("%s: LSC_data[3]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[3],     p_otp->LSC_data[3]);
-  CDBG("%s: LSC_data[4]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[4],     p_otp->LSC_data[4]);
-  CDBG("%s: LSC_data[5]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[5],     p_otp->LSC_data[5]);
-  CDBG("%s: LSC_data[6]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[6],     p_otp->LSC_data[6]);
-  CDBG("%s: LSC_data[7]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[7],     p_otp->LSC_data[7]);
-  CDBG("%s: LSC_data[8]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[8],     p_otp->LSC_data[8]);
-  CDBG("%s: LSC_data[9]     = 0x%04x (%d)\n",__func__,p_otp->LSC_data[9],     p_otp->LSC_data[9]);
-  CDBG("%s: LSC_data[10]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[10],    p_otp->LSC_data[10]);
-  CDBG("%s: LSC_data[11]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[11],    p_otp->LSC_data[11]);
-  CDBG("%s: LSC_data[12]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[12],    p_otp->LSC_data[12]);
-  CDBG("%s: LSC_data[13]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[13],    p_otp->LSC_data[13]);
-  CDBG("%s: LSC_data[14]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[14],    p_otp->LSC_data[14]);
-  CDBG("%s: LSC_data[15]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[15],    p_otp->LSC_data[15]);
-  CDBG("%s: LSC_data[16]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[16],    p_otp->LSC_data[16]);
-  CDBG("%s: LSC_data[17]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[17],    p_otp->LSC_data[17]);
-  CDBG("%s: LSC_data[18]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[18],    p_otp->LSC_data[18]);
-  CDBG("%s: LSC_data[19]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[19],    p_otp->LSC_data[19]);
-  CDBG("%s: LSC_data[20]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[20],    p_otp->LSC_data[20]);
-  CDBG("%s: LSC_data[21]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[21],    p_otp->LSC_data[21]);
-  CDBG("%s: LSC_data[22]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[22],    p_otp->LSC_data[22]);
-  CDBG("%s: LSC_data[23]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[23],    p_otp->LSC_data[23]);
-  CDBG("%s: LSC_data[24]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[24],    p_otp->LSC_data[24]);
-  CDBG("%s: LSC_data[25]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[25],    p_otp->LSC_data[25]);
-  CDBG("%s: LSC_data[26]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[26],    p_otp->LSC_data[26]);
-  CDBG("%s: LSC_data[27]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[27],    p_otp->LSC_data[27]);
-  CDBG("%s: LSC_data[28]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[28],    p_otp->LSC_data[28]);
-  CDBG("%s: LSC_data[29]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[29],    p_otp->LSC_data[29]);
-  CDBG("%s: LSC_data[30]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[30],    p_otp->LSC_data[30]);
-  CDBG("%s: LSC_data[31]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[31],    p_otp->LSC_data[31]);
-  CDBG("%s: LSC_data[32]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[32],    p_otp->LSC_data[32]);
-  CDBG("%s: LSC_data[33]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[33],    p_otp->LSC_data[33]);
-  CDBG("%s: LSC_data[34]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[34],    p_otp->LSC_data[34]);
-  CDBG("%s: LSC_data[35]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[35],    p_otp->LSC_data[35]);
-  CDBG("%s: LSC_data[36]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[36],    p_otp->LSC_data[36]);
-  CDBG("%s: LSC_data[37]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[37],    p_otp->LSC_data[37]);
-  CDBG("%s: LSC_data[38]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[38],    p_otp->LSC_data[38]);
-  CDBG("%s: LSC_data[39]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[39],    p_otp->LSC_data[39]);
-  CDBG("%s: LSC_data[40]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[40],    p_otp->LSC_data[40]);
-  CDBG("%s: LSC_data[41]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[41],    p_otp->LSC_data[41]);
-  CDBG("%s: LSC_data[42]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[42],    p_otp->LSC_data[42]);
-  CDBG("%s: LSC_data[43]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[43],    p_otp->LSC_data[43]);
-  CDBG("%s: LSC_data[44]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[44],    p_otp->LSC_data[44]);
-  CDBG("%s: LSC_data[45]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[45],    p_otp->LSC_data[45]);
-  CDBG("%s: LSC_data[46]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[46],    p_otp->LSC_data[46]);
-  CDBG("%s: LSC_data[47]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[47],    p_otp->LSC_data[47]);
-  CDBG("%s: LSC_data[48]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[48],    p_otp->LSC_data[48]);
-  CDBG("%s: LSC_data[49]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[49],    p_otp->LSC_data[49]);
-  CDBG("%s: LSC_data[50]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[50],    p_otp->LSC_data[50]);
-  CDBG("%s: LSC_data[51]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[51],    p_otp->LSC_data[51]);
-  CDBG("%s: LSC_data[52]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[52],    p_otp->LSC_data[52]);
-  CDBG("%s: LSC_data[53]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[53],    p_otp->LSC_data[53]);
-  CDBG("%s: LSC_data[54]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[54],    p_otp->LSC_data[54]);
-  CDBG("%s: LSC_data[55]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[55],    p_otp->LSC_data[55]);
-  CDBG("%s: LSC_data[56]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[56],    p_otp->LSC_data[56]);
-  CDBG("%s: LSC_data[57]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[57],    p_otp->LSC_data[57]);
-  CDBG("%s: LSC_data[58]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[58],    p_otp->LSC_data[58]);
-  CDBG("%s: LSC_data[59]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[59],    p_otp->LSC_data[59]);
-  CDBG("%s: LSC_data[60]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[60],    p_otp->LSC_data[60]);
-  CDBG("%s: LSC_data[61]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[61],    p_otp->LSC_data[61]);
-  CDBG("%s: LSC_data[62]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[62],    p_otp->LSC_data[62]);
-  CDBG("%s: LSC_data[63]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[63],    p_otp->LSC_data[63]);
-  CDBG("%s: LSC_data[64]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[64],    p_otp->LSC_data[64]);
-  CDBG("%s: LSC_data[65]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[65],    p_otp->LSC_data[65]);
-  CDBG("%s: LSC_data[66]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[66],    p_otp->LSC_data[66]);
-  CDBG("%s: LSC_data[67]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[67],    p_otp->LSC_data[67]);
-  CDBG("%s: LSC_data[68]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[68],    p_otp->LSC_data[68]);
-  CDBG("%s: LSC_data[69]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[69],    p_otp->LSC_data[69]);
-  CDBG("%s: LSC_data[70]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[70],    p_otp->LSC_data[70]);
-  CDBG("%s: LSC_data[71]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[71],    p_otp->LSC_data[71]);
-  CDBG("%s: LSC_data[72]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[72],    p_otp->LSC_data[72]);
-  CDBG("%s: LSC_data[73]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[73],    p_otp->LSC_data[73]);
-  CDBG("%s: LSC_data[74]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[74],    p_otp->LSC_data[74]);
-  CDBG("%s: LSC_data[75]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[75],    p_otp->LSC_data[75]);
-  CDBG("%s: LSC_data[76]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[76],    p_otp->LSC_data[76]);
-  CDBG("%s: LSC_data[77]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[77],    p_otp->LSC_data[77]);
-  CDBG("%s: LSC_data[78]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[78],    p_otp->LSC_data[78]);
-  CDBG("%s: LSC_data[79]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[79],    p_otp->LSC_data[79]);
-  CDBG("%s: LSC_data[80]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[80],    p_otp->LSC_data[80]);
-  CDBG("%s: LSC_data[81]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[81],    p_otp->LSC_data[81]);
-  CDBG("%s: LSC_data[82]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[82],    p_otp->LSC_data[82]);
-  CDBG("%s: LSC_data[83]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[83],    p_otp->LSC_data[83]);
-  CDBG("%s: LSC_data[84]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[84],    p_otp->LSC_data[84]);
-  CDBG("%s: LSC_data[85]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[85],    p_otp->LSC_data[85]);
-  CDBG("%s: LSC_data[86]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[86],    p_otp->LSC_data[86]);
-  CDBG("%s: LSC_data[87]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[87],    p_otp->LSC_data[87]);
-  CDBG("%s: LSC_data[88]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[88],    p_otp->LSC_data[88]);
-  CDBG("%s: LSC_data[89]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[89],    p_otp->LSC_data[89]);
-  CDBG("%s: LSC_data[90]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[90],    p_otp->LSC_data[90]);
-  CDBG("%s: LSC_data[91]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[91],    p_otp->LSC_data[91]);
-  CDBG("%s: LSC_data[92]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[92],    p_otp->LSC_data[92]);
-  CDBG("%s: LSC_data[93]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[93],    p_otp->LSC_data[93]);
-  CDBG("%s: LSC_data[94]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[94],    p_otp->LSC_data[94]);
-  CDBG("%s: LSC_data[95]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[95],    p_otp->LSC_data[95]);
-  CDBG("%s: LSC_data[96]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[96],    p_otp->LSC_data[96]);
-  CDBG("%s: LSC_data[97]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[97],    p_otp->LSC_data[97]);
-  CDBG("%s: LSC_data[98]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[98],    p_otp->LSC_data[98]);
-  CDBG("%s: LSC_data[99]    = 0x%04x (%d)\n",__func__,p_otp->LSC_data[99],    p_otp->LSC_data[99]);
-  CDBG("%s: LSC_data[100]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[100],   p_otp->LSC_data[100]);
-  CDBG("%s: LSC_data[101]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[101],   p_otp->LSC_data[101]);
-  CDBG("%s: LSC_data[102]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[102],   p_otp->LSC_data[102]);
-  CDBG("%s: LSC_data[103]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[103],   p_otp->LSC_data[103]);
-  CDBG("%s: LSC_data[104]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[104],   p_otp->LSC_data[104]);
-  CDBG("%s: LSC_data[105]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[105],   p_otp->LSC_data[105]);
+  CDBG("%s: Module_info_0 = 0x%04x (%d)\n",__func__,p_otp->Module_info_0,p_otp->Module_info_0);
+  CDBG("%s: Module_info_1 = 0x%04x (%d)\n",__func__,p_otp->Module_info_1,p_otp->Module_info_1);
+  CDBG("%s: Module_info_2 = 0x%04x (%d)\n",__func__,p_otp->Module_info_2,p_otp->Module_info_2);
+  CDBG("%s: Reserve_0     = 0x%04x (%d)\n",__func__,p_otp->Reserve_0,    p_otp->Reserve_0);
+  CDBG("%s: R_Gr          = 0x%04x (%d)\n",__func__,p_otp->R_Gr,         p_otp->R_Gr);
+  CDBG("%s: B_Gr          = 0x%04x (%d)\n",__func__,p_otp->B_Gr,         p_otp->B_Gr);
+  CDBG("%s: Gb_Gr         = 0x%04x (%d)\n",__func__,p_otp->Gb_Gr,        p_otp->Gb_Gr);
+  CDBG("%s: Reserve_1     = 0x%04x (%d)\n",__func__,p_otp->Reserve_1,    p_otp->Reserve_1);
+  CDBG("%s: LSC_data[0]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[0],  p_otp->LSC_data[0]);
+  CDBG("%s: LSC_data[1]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[1],  p_otp->LSC_data[1]);
+  CDBG("%s: LSC_data[2]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[2],  p_otp->LSC_data[2]);
+  CDBG("%s: LSC_data[3]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[3],  p_otp->LSC_data[3]);
+  CDBG("%s: LSC_data[4]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[4],  p_otp->LSC_data[4]);
+  CDBG("%s: LSC_data[5]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[5],  p_otp->LSC_data[5]);
+  CDBG("%s: LSC_data[6]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[6],  p_otp->LSC_data[6]);
+  CDBG("%s: LSC_data[7]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[7],  p_otp->LSC_data[7]);
+  CDBG("%s: LSC_data[8]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[8],  p_otp->LSC_data[8]);
+  CDBG("%s: LSC_data[9]   = 0x%04x (%d)\n",__func__,p_otp->LSC_data[9],  p_otp->LSC_data[9]);
+  CDBG("%s: LSC_data[10]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[10], p_otp->LSC_data[10]);
+  CDBG("%s: LSC_data[11]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[11], p_otp->LSC_data[11]);
+  CDBG("%s: LSC_data[12]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[12], p_otp->LSC_data[12]);
+  CDBG("%s: LSC_data[13]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[13], p_otp->LSC_data[13]);
+  CDBG("%s: LSC_data[14]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[14], p_otp->LSC_data[14]);
+  CDBG("%s: LSC_data[15]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[15], p_otp->LSC_data[15]);
+  CDBG("%s: LSC_data[16]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[16], p_otp->LSC_data[16]);
+  CDBG("%s: LSC_data[17]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[17], p_otp->LSC_data[17]);
+  CDBG("%s: LSC_data[18]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[18], p_otp->LSC_data[18]);
+  CDBG("%s: LSC_data[19]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[19], p_otp->LSC_data[19]);
+  CDBG("%s: LSC_data[20]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[20], p_otp->LSC_data[20]);
+  CDBG("%s: LSC_data[21]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[21], p_otp->LSC_data[21]);
+  CDBG("%s: LSC_data[22]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[22], p_otp->LSC_data[22]);
+  CDBG("%s: LSC_data[23]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[23], p_otp->LSC_data[23]);
+  CDBG("%s: LSC_data[24]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[24], p_otp->LSC_data[24]);
+  CDBG("%s: LSC_data[25]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[25], p_otp->LSC_data[25]);
+  CDBG("%s: LSC_data[26]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[26], p_otp->LSC_data[26]);
+  CDBG("%s: LSC_data[27]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[27], p_otp->LSC_data[27]);
+  CDBG("%s: LSC_data[28]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[28], p_otp->LSC_data[28]);
+  CDBG("%s: LSC_data[29]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[29], p_otp->LSC_data[29]);
+  CDBG("%s: LSC_data[30]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[30], p_otp->LSC_data[30]);
+  CDBG("%s: LSC_data[31]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[31], p_otp->LSC_data[31]);
+  CDBG("%s: LSC_data[32]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[32], p_otp->LSC_data[32]);
+  CDBG("%s: LSC_data[33]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[33], p_otp->LSC_data[33]);
+  CDBG("%s: LSC_data[34]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[34], p_otp->LSC_data[34]);
+  CDBG("%s: LSC_data[35]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[35], p_otp->LSC_data[35]);
+  CDBG("%s: LSC_data[36]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[36], p_otp->LSC_data[36]);
+  CDBG("%s: LSC_data[37]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[37], p_otp->LSC_data[37]);
+  CDBG("%s: LSC_data[38]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[38], p_otp->LSC_data[38]);
+  CDBG("%s: LSC_data[39]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[39], p_otp->LSC_data[39]);
+  CDBG("%s: LSC_data[40]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[40], p_otp->LSC_data[40]);
+  CDBG("%s: LSC_data[41]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[41], p_otp->LSC_data[41]);
+  CDBG("%s: LSC_data[42]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[42], p_otp->LSC_data[42]);
+  CDBG("%s: LSC_data[43]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[43], p_otp->LSC_data[43]);
+  CDBG("%s: LSC_data[44]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[44], p_otp->LSC_data[44]);
+  CDBG("%s: LSC_data[45]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[45], p_otp->LSC_data[45]);
+  CDBG("%s: LSC_data[46]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[46], p_otp->LSC_data[46]);
+  CDBG("%s: LSC_data[47]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[47], p_otp->LSC_data[47]);
+  CDBG("%s: LSC_data[48]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[48], p_otp->LSC_data[48]);
+  CDBG("%s: LSC_data[49]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[49], p_otp->LSC_data[49]);
+  CDBG("%s: LSC_data[50]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[50], p_otp->LSC_data[50]);
+  CDBG("%s: LSC_data[51]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[51], p_otp->LSC_data[51]);
+  CDBG("%s: LSC_data[52]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[52], p_otp->LSC_data[52]);
+  CDBG("%s: LSC_data[53]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[53], p_otp->LSC_data[53]);
+  CDBG("%s: LSC_data[54]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[54], p_otp->LSC_data[54]);
+  CDBG("%s: LSC_data[55]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[55], p_otp->LSC_data[55]);
+  CDBG("%s: LSC_data[56]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[56], p_otp->LSC_data[56]);
+  CDBG("%s: LSC_data[57]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[57], p_otp->LSC_data[57]);
+  CDBG("%s: LSC_data[58]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[58], p_otp->LSC_data[58]);
+  CDBG("%s: LSC_data[59]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[59], p_otp->LSC_data[59]);
+  CDBG("%s: LSC_data[60]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[60], p_otp->LSC_data[60]);
+  CDBG("%s: LSC_data[61]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[61], p_otp->LSC_data[61]);
+  CDBG("%s: LSC_data[62]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[62], p_otp->LSC_data[62]);
+  CDBG("%s: LSC_data[63]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[63], p_otp->LSC_data[63]);
+  CDBG("%s: LSC_data[64]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[64], p_otp->LSC_data[64]);
+  CDBG("%s: LSC_data[65]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[65], p_otp->LSC_data[65]);
+  CDBG("%s: LSC_data[66]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[66], p_otp->LSC_data[66]);
+  CDBG("%s: LSC_data[67]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[67], p_otp->LSC_data[67]);
+  CDBG("%s: LSC_data[68]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[68], p_otp->LSC_data[68]);
+  CDBG("%s: LSC_data[69]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[69], p_otp->LSC_data[69]);
+  CDBG("%s: LSC_data[70]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[70], p_otp->LSC_data[70]);
+  CDBG("%s: LSC_data[71]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[71], p_otp->LSC_data[71]);
+  CDBG("%s: LSC_data[72]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[72], p_otp->LSC_data[72]);
+  CDBG("%s: LSC_data[73]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[73], p_otp->LSC_data[73]);
+  CDBG("%s: LSC_data[74]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[74], p_otp->LSC_data[74]);
+  CDBG("%s: LSC_data[75]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[75], p_otp->LSC_data[75]);
+  CDBG("%s: LSC_data[76]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[76], p_otp->LSC_data[76]);
+  CDBG("%s: LSC_data[77]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[77], p_otp->LSC_data[77]);
+  CDBG("%s: LSC_data[78]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[78], p_otp->LSC_data[78]);
+  CDBG("%s: LSC_data[79]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[79], p_otp->LSC_data[79]);
+  CDBG("%s: LSC_data[80]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[80], p_otp->LSC_data[80]);
+  CDBG("%s: LSC_data[81]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[81], p_otp->LSC_data[81]);
+  CDBG("%s: LSC_data[82]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[82], p_otp->LSC_data[82]);
+  CDBG("%s: LSC_data[83]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[83], p_otp->LSC_data[83]);
+  CDBG("%s: LSC_data[84]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[84], p_otp->LSC_data[84]);
+  CDBG("%s: LSC_data[85]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[85], p_otp->LSC_data[85]);
+  CDBG("%s: LSC_data[86]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[86], p_otp->LSC_data[86]);
+  CDBG("%s: LSC_data[87]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[87], p_otp->LSC_data[87]);
+  CDBG("%s: LSC_data[88]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[88], p_otp->LSC_data[88]);
+  CDBG("%s: LSC_data[89]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[89], p_otp->LSC_data[89]);
+  CDBG("%s: LSC_data[90]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[90], p_otp->LSC_data[90]);
+  CDBG("%s: LSC_data[91]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[91], p_otp->LSC_data[91]);
+  CDBG("%s: LSC_data[92]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[92], p_otp->LSC_data[92]);
+  CDBG("%s: LSC_data[93]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[93], p_otp->LSC_data[93]);
+  CDBG("%s: LSC_data[94]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[94], p_otp->LSC_data[94]);
+  CDBG("%s: LSC_data[95]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[95], p_otp->LSC_data[95]);
+  CDBG("%s: LSC_data[96]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[96], p_otp->LSC_data[96]);
+  CDBG("%s: LSC_data[97]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[97], p_otp->LSC_data[97]);
+  CDBG("%s: LSC_data[98]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[98], p_otp->LSC_data[98]);
+  CDBG("%s: LSC_data[99]  = 0x%04x (%d)\n",__func__,p_otp->LSC_data[99], p_otp->LSC_data[99]);
+  CDBG("%s: LSC_data[100] = 0x%04x (%d)\n",__func__,p_otp->LSC_data[100],p_otp->LSC_data[100]);
+  CDBG("%s: LSC_data[101] = 0x%04x (%d)\n",__func__,p_otp->LSC_data[101],p_otp->LSC_data[101]);
+  CDBG("%s: LSC_data[102] = 0x%04x (%d)\n",__func__,p_otp->LSC_data[102],p_otp->LSC_data[102]);
+  CDBG("%s: LSC_data[103] = 0x%04x (%d)\n",__func__,p_otp->LSC_data[103],p_otp->LSC_data[103]);
+  CDBG("%s: LSC_data[104] = 0x%04x (%d)\n",__func__,p_otp->LSC_data[104],p_otp->LSC_data[104]);
+  CDBG("%s: LSC_data[105] = 0x%04x (%d)\n",__func__,p_otp->LSC_data[105],p_otp->LSC_data[105]);
+  CDBG("%s: Reserve_2     = 0x%04x (%d)\n",__func__,p_otp->Reserve_2,    p_otp->Reserve_2);
+  CDBG("%s: AF_infinity   = 0x%04x (%d)\n",__func__,p_otp->AF_infinity,  p_otp->AF_infinity);
+  CDBG("%s: AF_macro      = 0x%04x (%d)\n",__func__,p_otp->AF_macro,     p_otp->AF_macro);
+  CDBG("%s: AF_data       = 0x%04x (%d)\n",__func__,p_otp->AF_data,      p_otp->AF_data);
+  CDBG("%s: OTP_flag_0    = 0x%04x (%d)\n",__func__,p_otp->OTP_flag_0,   p_otp->OTP_flag_0);
+  CDBG("%s: OTP_flag_1    = 0x%04x (%d)\n",__func__,p_otp->OTP_flag_1,   p_otp->OTP_flag_1);
 #endif
   return otp_status;
 }
@@ -932,7 +927,7 @@ int32_t ar0542_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
     s_ctrl->func_tbl->sensor_stop_stream(s_ctrl);
     rc = msm_sensor_write_init_settings(s_ctrl);
     csi_config = 0;
-    //ar0542_update_otp(s_ctrl);
+    ar0542_update_otp(s_ctrl);
   } else if (update_type == MSM_SENSOR_UPDATE_PERIODIC) {
     CDBG("PERIODIC : %d\n", res);
 	msm_camera_i2c_read(s_ctrl->sensor_i2c_client, 0x30f2, &af_reg_dac, MSM_CAMERA_I2C_WORD_DATA);
@@ -964,6 +959,15 @@ int32_t ar0542_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
         MSM_CAMERA_I2C_BYTE_DATA);
     s_ctrl->func_tbl->sensor_group_hold_off(s_ctrl);
     CDBG("PERIODIC : register setting is done\n");
+
+    if(res == 0){
+      // preview -> capture
+      ;
+    }else{
+      // capture -> preview
+      s_ctrl->func_tbl->sensor_write_exp_gain(s_ctrl,
+        ar0542_prev_exp_gain,ar0542_prev_exp_line);
+    }
     if (!csi_config) {
       s_ctrl->curr_csic_params = s_ctrl->csic_params[res];
       v4l2_subdev_notify(&s_ctrl->sensor_v4l2_subdev,
