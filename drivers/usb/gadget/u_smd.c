@@ -2,6 +2,7 @@
  * u_smd.c - utilities for USB gadget serial over smd
  *
  * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * This code also borrows from drivers/usb/gadget/u_serial.c, which is
  * Copyright (C) 2000 - 2003 Al Borchers (alborchers@steinerpoint.com)
@@ -49,6 +50,13 @@ struct smd_port_info {
 	unsigned long		flags;
 };
 
+#define SYSFS_BUF_LEN	SMD_TX_BUF_SIZE
+struct sysfs_buf {
+	struct list_head list;
+	char* buf;
+	unsigned int length;
+};
+
 struct smd_port_info smd_pi[SMD_N_PORTS] = {
 	{
 		.name = "DS",
@@ -67,14 +75,18 @@ struct gsmd_port {
 
 	unsigned		n_read;
 	struct list_head	read_pool;
+	struct list_head	sysfs_wr_pool;
 	struct list_head	read_queue;
+	struct list_head	data_queue;
 	struct work_struct	push;
 
 	struct list_head	write_pool;
-	struct list_head	sysfs_pool;
+	struct list_head	sysfs_rd_pool;
+	struct list_head	smd_rd_pool;
 	struct work_struct	pull;
 
 	struct gserial		*port_usb;
+	struct gserial		*at_port;
 
 	struct smd_port_info	*pi;
 	struct delayed_work	connect_work;
@@ -123,6 +135,52 @@ static void gsmd_free_requests(struct usb_ep *ep, struct list_head *head)
 		list_del(&req->list);
 		gsmd_free_req(ep, req);
 	}
+}
+
+static void gsmd_free_sysfs_bufs(struct gsmd_port *port, struct list_head *head)
+{
+	struct sysfs_buf *req;
+	unsigned long flags;
+
+	spin_lock_irqsave(&port->port_lock, flags);
+	while (!list_empty(head)) {
+		req = list_entry(head->next, struct sysfs_buf, list);
+		list_del(&req->list);
+		spin_unlock_irqrestore(&port->port_lock, flags);
+		kfree(req->buf);
+		kfree(req);
+		spin_lock_irqsave(&port->port_lock, flags);
+	}
+	spin_unlock_irqrestore(&port->port_lock, flags);
+}
+
+static int gsmd_alloc_sysfs_bufs(struct gsmd_port *port, struct list_head *head, int num)
+{
+	struct sysfs_buf *sys_buf;
+	unsigned long flags;
+	int i;
+
+	for (i = 0; i < num; i++) {
+		sys_buf = kmalloc(sizeof(struct sysfs_buf), GFP_KERNEL);
+		if (!sys_buf) {
+			pr_err("%s: failed to allocate sysfs buffer\n", __func__);
+			goto free_mem;
+		}
+		sys_buf->length = SYSFS_BUF_LEN;
+		sys_buf->buf = kmalloc(SYSFS_BUF_LEN, GFP_KERNEL);
+		if (!sys_buf->buf) {
+			pr_err("%s: failed to allocate sysfs buffer\n", __func__);
+			kfree(sys_buf);
+			goto free_mem;
+		}
+		spin_lock_irqsave(&port->port_lock, flags);
+		list_add(&sys_buf->list, head);
+		spin_unlock_irqrestore(&port->port_lock, flags);
+	}
+	return 0;
+free_mem:
+	gsmd_free_sysfs_bufs(port, head);
+	return -ENOMEM;
 }
 
 static struct usb_request *
@@ -228,6 +286,48 @@ static void gsmd_rx_push(struct work_struct *w)
 
 	spin_lock_irq(&port->port_lock);
 
+	if (port->atcmd) {
+		q = &port->data_queue;
+		while (pi->ch && !list_empty(q)) {
+			struct sysfs_buf *req;
+			int avail;
+
+			req = list_first_entry(q, struct sysfs_buf, list);
+			avail = smd_write_avail(pi->ch);
+			if (!avail)
+				goto rx_push_end;
+			if (likely(req->length)) {
+				char		*packet = req->buf;
+				unsigned 	size = req->length;
+				unsigned	n;
+				int		count;
+
+				n = port->n_read;
+				if (n) {
+					packet += n;
+					size -= n;
+				}
+
+				count = smd_write(pi->ch, packet, size);
+				if (count < 0) {
+					pr_err("%s: smd write failed err:%d\n",
+							__func__, count);
+					goto rx_push_end;
+				}
+
+				if (count != size) {
+					port->n_read += count;
+					port->nbytes_tomodem += count;
+					goto rx_push_end;
+				}
+
+			}
+			port->n_read = 0;
+			list_move(&req->list, &port->sysfs_wr_pool);
+		}
+		goto rx_push_end;
+	}
+
 	q = &port->read_queue;
 	while (pi->ch && !list_empty(q)) {
 		struct usb_request *req;
@@ -285,9 +385,23 @@ static void gsmd_rx_push(struct work_struct *w)
 	}
 
 rx_push_end:
-	spin_unlock_irq(&port->port_lock);
 
-	gsmd_start_rx(port);
+	if (global_atcmd && !port->atcmd) {
+		/* ensure that read_queue is empty */
+		if (!list_empty(q))
+			queue_work(gsmd_wq, &port->push);
+		else
+			port->atcmd = 1;
+	} else if (global_atcmd && port->atcmd) {
+		/* nothing to do */
+	} else if (!global_atcmd && port->atcmd) {
+		port->atcmd = 0;
+	} else {
+		spin_unlock_irq(&port->port_lock);
+		gsmd_start_rx(port);
+		return;
+	}
+	spin_unlock_irq(&port->port_lock);
 }
 
 static void gsmd_read_pending(struct gsmd_port *port)
@@ -307,23 +421,49 @@ static void gsmd_read_pending(struct gsmd_port *port)
 static void gsmd_tx_pull(struct work_struct *w)
 {
 	struct gsmd_port *port = container_of(w, struct gsmd_port, pull);
-	struct list_head *pool = &port->write_pool;
 	struct smd_port_info *pi = port->pi;
+	struct list_head *pool = NULL;
 	struct usb_ep *in;
 
-	pr_debug("%s: port:%p port#%d pool:%p\n", __func__,
-			port, port->port_num, pool);
-
 	spin_lock_irq(&port->port_lock);
-
-	if (!port->port_usb) {
+	if (!port->port_usb && !(global_atcmd || port->atcmd)) {
 		pr_debug("%s: usb is disconnected\n", __func__);
 		spin_unlock_irq(&port->port_lock);
 		gsmd_read_pending(port);
 		return;
 	}
 
+	if (port->atcmd) {
+		pool = &port->smd_rd_pool;
+		pr_debug("%s: port:%p port#%d pool:%p\n", __func__,
+				port, port->port_num, pool);
+
+		while (pi->ch && !list_empty(pool)) {
+			struct sysfs_buf *req;
+			int avail;
+
+			avail = smd_read_avail(pi->ch);
+			if (!avail)
+				break;
+			avail = avail > SMD_TX_BUF_SIZE ? SMD_TX_BUF_SIZE : avail;
+
+			req = list_entry(pool->next, struct sysfs_buf, list);
+			list_del(&req->list);
+			req->length = smd_read(pi->ch, req->buf, avail);
+			list_add_tail(&req->list, &port->sysfs_rd_pool);
+
+			port->nbytes_tolaptop += req->length;
+		}
+		goto tx_pull_end;
+	}
+
+	if (!port->port_usb)
+		goto tx_pull_end;
 	in = port->port_usb->in;
+	pool = &port->write_pool;
+	pr_debug("%s: port:%p port#%d pool:%p\n", __func__,
+		port, port->port_num, pool);
+
 	while (pi->ch && !list_empty(pool)) {
 		struct usb_request *req;
 		int avail;
@@ -340,35 +480,39 @@ static void gsmd_tx_pull(struct work_struct *w)
 		req->length = smd_read(pi->ch, req->buf, avail);
 
 		spin_unlock_irq(&port->port_lock);
-		if (port->atcmd) {
-			spin_lock_irq(&port->port_lock);
-			list_add(&req->list, &port->sysfs_pool);
-		} else {
-			ret = usb_ep_queue(in, req, GFP_KERNEL);
-			spin_lock_irq(&port->port_lock);
-			if (ret) {
-				pr_err("%s: usb ep out queue failed"
-						"port:%p, port#%d err:%d\n",
-						__func__, port, port->port_num, ret);
-				/* could be usb disconnected */
-				if (!port->port_usb)
-					gsmd_free_req(in, req);
-				else
-					list_add(&req->list, pool);
-				goto tx_pull_end;
-			}
+		ret = usb_ep_queue(in, req, GFP_KERNEL);
+		spin_lock_irq(&port->port_lock);
+		if (ret) {
+			pr_err("%s: usb ep out queue failed"
+					"port:%p, port#%d err:%d\n",
+					__func__, port, port->port_num, ret);
+			/* could be usb disconnected */
+			if (!port->port_usb)
+				gsmd_free_req(in, req);
+			else
+				list_add(&req->list, pool);
+			goto tx_pull_end;
 		}
 		port->nbytes_tolaptop += req->length;
 	}
 
 tx_pull_end:
-	if (global_atcmd) {
-		port->atcmd = 1;
-	} else
-		port->atcmd = 0;
-	/* TBD: Check how code behaves on USB bus suspend */
-	if (port->port_usb && smd_read_avail(port->pi->ch) && !list_empty(pool))
+
+	if (global_atcmd && !port->atcmd) {
+		/* TBD: Check how code behaves on USB bus suspend */
+		if (port->port_usb && smd_read_avail(port->pi->ch) && !list_empty(pool))
+			queue_work(gsmd_wq, &port->pull);
+		else
+			port->atcmd = 1;
+	} else if (global_atcmd && port->atcmd) {
 		queue_work(gsmd_wq, &port->pull);
+	} else if (!global_atcmd && port->atcmd) {
+		port->atcmd = 0;
+	} else {
+		/* TBD: Check how code behaves on USB bus suspend */
+		if (port->port_usb && smd_read_avail(port->pi->ch) && !list_empty(pool))
+			queue_work(gsmd_wq, &port->pull);
+	}
 
 	spin_unlock_irq(&port->port_lock);
 
@@ -599,6 +743,8 @@ static void gsmd_connect_work(struct work_struct *w)
 
 	if (!test_bit(CH_READY, &pi->flags))
 		return;
+	if (test_bit(CH_OPENED, &pi->flags))
+		return;
 
 	ret = smd_named_open_on_edge(pi->name, SMD_APPS_MODEM,
 				&pi->ch, port, gsmd_notify);
@@ -652,16 +798,30 @@ static void gsmd_notify_modem(void *gptr, u8 portno, int ctrl_bits)
 		i = smd_tiocmget(port->pi->ch);
 		port->cbits_to_laptop = convert_uart_sigs_to_acm(i);
 
-		if (gser->send_modem_ctrl_bits)
+		if (gser->send_modem_ctrl_bits) {
 			gser->send_modem_ctrl_bits(
-					port->port_usb,
-					port->cbits_to_laptop);
+					gser, port->cbits_to_laptop);
+		}
 	}
 
 	smd_tiocmset(port->pi->ch,
 			port->cbits_to_modem,
 			~port->cbits_to_modem);
 }
+
+void gsmd_set_smd_port(struct gserial *gser)
+{
+	static int portno = 0;
+	struct gsmd_port *port;
+
+	/* FIXME:need to initialize the nbytes_tomodem, nbytes_tolaptop */
+	if (portno >= n_smd_ports)
+		portno = 0;
+	port = smd_ports[portno].port;
+	port->at_port = gser;
+	portno++;
+}
+
 
 int gsmd_connect(struct gserial *gser, u8 portno)
 {
@@ -838,10 +998,13 @@ static int gsmd_port_alloc(int portno, struct usb_cdc_line_coding *coding)
 
 	INIT_LIST_HEAD(&port->read_pool);
 	INIT_LIST_HEAD(&port->read_queue);
+	INIT_LIST_HEAD(&port->data_queue);
+	INIT_LIST_HEAD(&port->sysfs_wr_pool);
 	INIT_WORK(&port->push, gsmd_rx_push);
 
 	INIT_LIST_HEAD(&port->write_pool);
-	INIT_LIST_HEAD(&port->sysfs_pool);
+	INIT_LIST_HEAD(&port->smd_rd_pool);
+	INIT_LIST_HEAD(&port->sysfs_rd_pool);
 	INIT_WORK(&port->pull, gsmd_tx_pull);
 
 	INIT_DELAYED_WORK(&port->connect_work, gsmd_connect_work);
@@ -943,16 +1106,16 @@ static ssize_t debug_txrx_read(struct file *file, char __user *ubuf,
 			size_t count, loff_t *ppos)
 {
 	struct gsmd_port *port;
-	struct usb_request *req;
+	struct sysfs_buf *req;
 	struct list_head *pool;
 	unsigned long flags;
 	ssize_t n_read = 0;
 
 	port = (struct gsmd_port*)file->private_data;
 	spin_lock_irqsave(&port->port_lock, flags);
-	pool = &port->sysfs_pool;
+	pool = &port->sysfs_rd_pool;
 	while (!list_empty(pool)) {
-		req = list_entry(pool->next, struct usb_request, list);
+		req = list_entry(pool->next, struct sysfs_buf, list);
 		if (n_read + req->length > count) {
 			spin_unlock_irqrestore(&port->port_lock, flags);
 			return n_read;
@@ -966,7 +1129,7 @@ static ssize_t debug_txrx_read(struct file *file, char __user *ubuf,
 
 		/* add it to the write_pool */
 		spin_lock_irqsave(&port->port_lock, flags);
-		list_add_tail(&req->list, &port->write_pool);
+		list_add_tail(&req->list, &port->smd_rd_pool);
 	}
 	spin_unlock_irqrestore(&port->port_lock, flags);
 
@@ -978,30 +1141,28 @@ static ssize_t debug_txrx_write(struct file *file, const char __user *ubuf,
 {
 	struct gsmd_port *port;
 	unsigned long flags;
-	struct usb_request *req;
+	struct sysfs_buf *req;
 	struct list_head *pool, *queue;
 
 	port = (struct gsmd_port*)file->private_data;
 
 	spin_lock_irqsave(&port->port_lock, flags);
-	pool = &port->read_pool;
+	pool = &port->sysfs_wr_pool;
 	if (!test_bit(CH_OPENED, &port->pi->flags) || list_empty(pool)) {
 		spin_unlock_irqrestore(&port->port_lock, flags);
 		return -EAGAIN;
 	}
-	req = list_entry(pool->next, struct usb_request, list);
+	req = list_entry(pool->next, struct sysfs_buf, list);
 	list_del(&req->list);
 	spin_unlock_irqrestore(&port->port_lock, flags);
 
 	req->length = min(count, (size_t)(SMD_TX_BUF_SIZE - 1));
 	if (copy_from_user(req->buf, ubuf, req->length))
 		return -EFAULT;
-	req->actual = req->length;
-	req->status = 0;
 	((char*)req->buf)[req->length - 1] = 13;
 
 	spin_lock_irqsave(&port->port_lock, flags);
-	queue = &port->read_queue;
+	queue = &port->data_queue;
 	list_add_tail(&req->list, queue);
 	queue_work(gsmd_wq, &port->push);
 	spin_unlock_irqrestore(&port->port_lock, flags);
@@ -1037,12 +1198,11 @@ static ssize_t debug_atcmd_write(struct file *file, const char __user *ubuf,
 {
 	int cur_atcmd, i, j;
 	struct gsmd_port *port;
-	struct usb_ep *in, *out;
-	unsigned long flags;
 	static struct dentry* dent_txrx[SMD_N_PORTS];
 	char name[16];
 	char buf[16];
 	int buf_size;
+	int ret;
 
 	buf_size = min(count, (sizeof(buf)-1));
 	if (copy_from_user(buf, ubuf, buf_size))
@@ -1062,46 +1222,58 @@ static ssize_t debug_atcmd_write(struct file *file, const char __user *ubuf,
 
 	if (cur_atcmd) {
 		if (global_atcmd)
-			return 0;
+			return buf_size;
 		global_atcmd = 1;
 		for (i = 0; i < n_smd_ports; i++) {
 			port = smd_ports[i].port;
-			spin_lock_irqsave(&port->port_lock, flags);
-			if (!port->port_usb) {
-				spin_unlock_irqrestore(&port->port_lock, flags);
-				continue;
+			/* make sure that read_queue is empty */
+			queue_work(gsmd_wq, &port->pull);
+			queue_work(gsmd_wq, &port->push);
+			queue_delayed_work(gsmd_wq, &port->connect_work, msecs_to_jiffies(0));
+			flush_workqueue(gsmd_wq);
+
+			/* allocate buffers */
+			ret = gsmd_alloc_sysfs_bufs(port, &port->sysfs_wr_pool, 3);
+			if (ret) {
+				global_atcmd = 0;
+				return ret;
 			}
-			in = port->port_usb->in;
-			out = port->port_usb->out;
-			spin_unlock_irqrestore(&port->port_lock, flags);
-			/* usb_ep_fifo_flush(in); */
-			usb_ep_fifo_flush(out);
+			ret = gsmd_alloc_sysfs_bufs(port, &port->smd_rd_pool, 3);
+			if (ret) {
+				global_atcmd = 0;
+				gsmd_free_sysfs_bufs(port, &port->sysfs_wr_pool);
+				return ret;
+			}
+
 			scnprintf(name, 16, "txrx_port%d", i);
 			dent_txrx[i] = debugfs_create_file(name, 0777, dent, port, &debug_txrx_ops);
 			if (!dent_txrx[i]) {
-				/* TODO: error handling */
 				pr_err("%s: failed to create debug file\n", __func__);
-				for (j = i - 1; j >= 0; j--)
+				global_atcmd = 0;
+				gsmd_free_sysfs_bufs(port, &port->sysfs_wr_pool);
+				gsmd_free_sysfs_bufs(port, &port->smd_rd_pool);
+				for (j = i - 1; j >= 0; j--) {
+					port = smd_ports[j].port;
+					gsmd_free_sysfs_bufs(port, &port->sysfs_wr_pool);
+					gsmd_free_sysfs_bufs(port, &port->smd_rd_pool);
 					debugfs_remove(dent_txrx[j]);
-				return 0;
+				}
+				return -ENOMEM;
 			}
-			gsmd_notify_modem(port->port_usb, i, 0x3);
+			gsmd_notify_modem(port->at_port, i, 0x3);
 		}
 	} else {
 		if (!global_atcmd)
 			return 0;
-		for (i = 0; i < n_smd_ports; i++)
-			debugfs_remove(dent_txrx[i]);
-
 		global_atcmd = 0;
 		for (i = 0; i < n_smd_ports; i++) {
 			port = smd_ports[i].port;
-			spin_lock_irqsave(&port->port_lock, flags);
-			if (!port->port_usb) {
-				spin_unlock_irqrestore(&port->port_lock, flags);
-				continue;
-			}
-			spin_unlock_irqrestore(&port->port_lock, flags);
+			gsmd_free_sysfs_bufs(port, &port->sysfs_wr_pool);
+			gsmd_free_sysfs_bufs(port, &port->smd_rd_pool);
+			debugfs_remove(dent_txrx[i]);
+		}
+		for (i = 0; i < n_smd_ports; i++) {
+			port = smd_ports[i].port;
 			gsmd_start_rx(port);
 		}
 	}
