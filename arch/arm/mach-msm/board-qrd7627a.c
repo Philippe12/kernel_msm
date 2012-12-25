@@ -50,7 +50,6 @@
 #include <mach/usbdiag.h>
 #include <mach/msm_memtypes.h>
 #include <mach/msm_serial_hs.h>
-#include <mach/msm_serial_pdata.h>
 #include <mach/pmic.h>
 #include <mach/socinfo.h>
 #include <mach/vreg.h>
@@ -83,11 +82,6 @@
 #define I2C_PIN_CTL       0x15
 #define I2C_NORMAL        0x40
 
-
-
-static struct msm_serial_platform_data msm_8625_uart1_pdata = {
-	.userid		= 10,
-};
 
 static struct msm_gpio qup_i2c_gpios_io[] = {
 	{ GPIO_CFG(60, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
@@ -1134,7 +1128,6 @@ static void __init add_platform_devices(void)
 				|| machine_is_msm8625q_evbd()
 				|| machine_is_msm8625q_skud()
 				|| machine_is_msm8625q_skue()) {
-		msm8625_device_uart1.dev.platform_data = &msm_8625_uart1_pdata;
 		platform_add_devices(msm8625_evb_devices,
 				ARRAY_SIZE(msm8625_evb_devices));
 		platform_add_devices(qrd3_devices,
