@@ -1423,6 +1423,9 @@ show_sync_sts(struct device *dev, struct device_attribute *attr, char *buf)
 			rmt_storage_get_sync_status(srv->rpc_client));
 }
 
+static void rmt_storage_set_client_status(struct rmt_storage_srv *srv,
+					  int enable);
+
 /*
  * Initiate the remote storage force sync and wait until
  * sync status is done or maximum 4 seconds in the reboot notifier.
@@ -1438,6 +1441,7 @@ static int rmt_storage_reboot_call(
 	 * In recovery mode RMT daemon is not available,
 	 * so return from reboot notifier without initiating
 	 * force sync.
+         * add senario: in normal mode, if reboot or shutdown  very early before the userspace open.
 	 */
 	spin_lock(&rmc->lock);
 	if (!rmc->open_excl) {
@@ -1468,6 +1472,9 @@ static int rmt_storage_reboot_call(
 			pr_err("%s: RMT storage sync failed.\n", __func__);
 
 		pr_info("%s: Un register RMT storage client.\n", __func__);
+
+		cancel_delayed_work_sync(&rmt_srv->restart_work);
+		rmt_storage_set_client_status(rmt_srv, 0);
 		msm_rpc_unregister_client(rmt_srv->rpc_client);
 		break;
 
@@ -1723,12 +1730,14 @@ unregister_client:
 
 static void rmt_storage_client_shutdown(struct platform_device *pdev)
 {
+#if 0
 	struct rpcsvr_platform_device *dev;
 	struct rmt_storage_srv *srv;
 
 	dev = container_of(pdev, struct rpcsvr_platform_device, base);
 	srv = rmt_storage_get_srv(dev->prog);
 	rmt_storage_set_client_status(srv, 0);
+#endif
 }
 
 static void rmt_storage_destroy_rmc(void)
