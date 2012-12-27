@@ -1290,7 +1290,7 @@ void __init qrd7627a_add_io_devices(void)
 
 		platform_device_register(&pmic_mpp_leds_pdev);
 		platform_device_register(&tricolor_leds_pdev);
-	} else if (machine_is_msm8625q_skud()) {
+	} else if (machine_is_msm8625q_skud() || machine_is_msm8625q_evbd()) {
 		platform_device_register(&pmic_mpp_leds_pdev_skud);
 		/* enable the skud flash and torch by gpio leds driver */
 		platform_device_register(&gpio_flash_skud);
