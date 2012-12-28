@@ -2,7 +2,7 @@
  * Driver for HighSpeed USB Client Controller in MSM7K
  *
  * Copyright (C) 2008 Google, Inc.
- * Copyright (c) 2009-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2009-2012, The Linux Foundation. All Rights Reserved.
  * Author: Mike Lockwood <lockwood@android.com>
  *         Brian Swetland <swetland@google.com>
  *
@@ -994,9 +994,7 @@ static void handle_setup(struct usb_info *ui)
 {
 	struct usb_ctrlrequest ctl;
 	struct usb_request *req = ui->setup_req;
-	struct msm_otg *otg = to_msm_otg(ui->xceiv);
 	int ret;
-	unsigned long flags;
 #ifdef CONFIG_USB_OTG
 	u8 hnp;
 #endif
@@ -1119,14 +1117,6 @@ static void handle_setup(struct usb_info *ui)
 	if (ctl.bRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD)) {
 		if (ctl.bRequest == USB_REQ_SET_CONFIGURATION) {
 			atomic_set(&ui->configured, !!ctl.wValue);
-			atomic_set(&otg->chg_type, USB_CHG_TYPE__SDP);
-
-			spin_lock_irqsave(&ui->lock, flags);
-			ui->usb_state = USB_STATE_CONFIGURED;
-			ui->flags = USB_FLAG_CONFIGURED;
-			spin_unlock_irqrestore(&ui->lock, flags);
-
-			schedule_work(&ui->work);
 			msm_hsusb_set_state(USB_STATE_CONFIGURED);
 		} else if (ctl.bRequest == USB_REQ_SET_ADDRESS) {
 			/*
@@ -1370,13 +1360,13 @@ static irqreturn_t usb_interrupt(int irq, void *data)
 		if (atomic_read(&ui->configured)) {
 			wake_lock(&ui->wlock);
 
-//			spin_lock_irqsave(&ui->lock, flags);
-//			ui->usb_state = USB_STATE_CONFIGURED;
-//			ui->flags = USB_FLAG_CONFIGURED;
-//			spin_unlock_irqrestore(&ui->lock, flags);
+			spin_lock_irqsave(&ui->lock, flags);
+			ui->usb_state = USB_STATE_CONFIGURED;
+			ui->flags = USB_FLAG_CONFIGURED;
+			spin_unlock_irqrestore(&ui->lock, flags);
 
 			ui->driver->resume(&ui->gadget);
-//			schedule_work(&ui->work);
+			schedule_work(&ui->work);
 		} else {
 			msm_hsusb_set_state(USB_STATE_DEFAULT);
 		}
