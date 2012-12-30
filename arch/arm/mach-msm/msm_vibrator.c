@@ -4,6 +4,7 @@
  * Copyright (C) 2008 HTC Corporation.
  * Copyright (C) 2007 Google, Inc.
  * Copyright (c) 2011 Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012 The Linux Foundation. All Rights Reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -36,18 +37,9 @@
 #define HTC_PROCEDURE_SET_VIB_ON_OFF	21
 #define PMIC_VIBRATOR_LEVEL	(3000)
 
-#if 0
-static struct work_struct work_vibrator_on;
-static struct work_struct work_vibrator_off;
-#endif
-
-static struct work_struct work_vibrator;
-static int vibe_state;
-
-static struct hrtimer vibe_timer;
-
-static DEFINE_MUTEX(vibe_mtx);
-static spinlock_t vibe_lock;
+static struct work_struct vibrator_work;
+static struct hrtimer vibrator_timer;
+static DEFINE_MUTEX(vibrator_mtx);
 
 #ifdef CONFIG_PM8XXX_RPC_VIBRATOR
 static void set_pmic_vibrator(int on)
@@ -102,70 +94,34 @@ static void set_pmic_vibrator(int on)
 }
 #endif
 
-#if 0
-static void pmic_vibrator_on(struct timed_output_dev *sdev)
-{
-	set_pmic_vibrator(1);
-}
-
-static void pmic_vibrator_off(struct timed_output_dev *sdev)
-{
-	set_pmic_vibrator(0);
-}
-
-static void pmic_vibrator_expire_off(struct work_struct *work)
-{
-	set_pmic_vibrator(0);
-}
-
-static void timed_vibrator_on(struct timed_output_dev *sdev)
-{
-	schedule_work(&work_vibrator_on);
-}
-
-static void timed_vibrator_off(struct timed_output_dev *sdev)
-{
-	schedule_work(&work_vibrator_off);
-}
-#endif
-
 static void update_vibrator(struct work_struct *work)
 {
-	printk("%s: turn on/off vibrator,vibe_state = %d \n",__func__,vibe_state);
-	set_pmic_vibrator(vibe_state);
+	pr_warn("%s\n", __func__);
+	set_pmic_vibrator(0);
 }
-
 
 static void vibrator_enable(struct timed_output_dev *dev, int value)
 {
-	unsigned long   flags;
+	mutex_lock(&vibrator_mtx);
+	hrtimer_cancel(&vibrator_timer);
+	cancel_work_sync(&vibrator_work);
 
-        spin_lock_irqsave(&vibe_lock, flags);
-
-	hrtimer_cancel(&vibe_timer);
-
-	if (value == 0)
-		vibe_state = 0;
-	else {
+	if (value == 0) {
+		set_pmic_vibrator(0);
+	} else {
 		value = (value > 15000 ? 15000 : value);
-
-		vibe_state = 1;
-
-		hrtimer_start(&vibe_timer,
+		set_pmic_vibrator(value);
+		hrtimer_start(&vibrator_timer,
 			      ktime_set(value / 1000, (value % 1000) * 1000000),
 			      HRTIMER_MODE_REL);
 	}
-	spin_unlock_irqrestore(&vibe_lock, flags);
-
-        schedule_work(&work_vibrator);
-	printk("%s: vibe_state = %d, value = %d, schedule to turn on/off vibrator because of app call \n", __func__, vibe_state, value);
-
+	mutex_unlock(&vibrator_mtx);
 }
 
 static int vibrator_get_time(struct timed_output_dev *dev)
 {
-	if (hrtimer_active(&vibe_timer)) {
-		ktime_t r = hrtimer_get_remaining(&vibe_timer);
+	if (hrtimer_active(&vibrator_timer)) {
+		ktime_t r = hrtimer_get_remaining(&vibrator_timer);
 		struct timeval t = ktime_to_timeval(r);
 		return t.tv_sec * 1000 + t.tv_usec / 1000;
 	}
@@ -174,9 +130,8 @@ static int vibrator_get_time(struct timed_output_dev *dev)
 
 static enum hrtimer_restart vibrator_timer_func(struct hrtimer *timer)
 {
-	vibe_state = 0;
-	schedule_work(&work_vibrator);
-	printk("%s: vibe_state = %d , schedule to turn off vibrator because timeout \n",__func__,vibe_state);
+	pr_warn("%s\n", __func__);
+	schedule_work(&vibrator_work);
 	return HRTIMER_NORESTART;
 }
 
@@ -188,13 +143,9 @@ static struct timed_output_dev pmic_vibrator = {
 
 void __init msm_init_pmic_vibrator(void)
 {
-	INIT_WORK(&work_vibrator, update_vibrator);
-
-	spin_lock_init(&vibe_lock);
-        vibe_state = 0;
-
-	hrtimer_init(&vibe_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	vibe_timer.function = vibrator_timer_func;
+	INIT_WORK(&vibrator_work, update_vibrator);
+	hrtimer_init(&vibrator_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
+	vibrator_timer.function = vibrator_timer_func;
 
 	timed_output_dev_register(&pmic_vibrator);
 }
