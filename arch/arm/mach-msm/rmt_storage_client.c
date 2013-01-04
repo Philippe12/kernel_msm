@@ -1436,6 +1436,7 @@ static int rmt_storage_reboot_call(
 	struct notifier_block *this, unsigned long code, void *cmd)
 {
 	int ret, count = 0;
+	struct msm_rpc_client *rpc_client;
 
 	/*
 	 * In recovery mode RMT daemon is not available,
@@ -1451,6 +1452,14 @@ static int rmt_storage_reboot_call(
 	}
 
 	spin_unlock(&rmc->lock);
+
+	rpc_client = rmt_storage_get_rpc_client(last_event.handle);
+
+        if (!rpc_client) {
+                pr_err("%s: rpc_client is null\n", __func__);
+                return NOTIFY_DONE;
+        }
+
 	switch (code) {
 	case SYS_RESTART:
 	case SYS_HALT:
