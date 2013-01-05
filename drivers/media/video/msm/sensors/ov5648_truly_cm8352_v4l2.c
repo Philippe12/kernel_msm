@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All Rights Reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All Rights Reserved.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -1184,7 +1184,7 @@ static struct msm_camera_csi_params ov5648_truly_cm8352_csi_params = {
 	.lane_cnt    = 2,
 	.lane_assign = 0xe4,
 	.dpcm_scheme = 0,
-	.settle_cnt  = 10,
+	.settle_cnt  = 20,
 };
 
 static struct v4l2_subdev_info ov5648_truly_cm8352_subdev_info[] = {
