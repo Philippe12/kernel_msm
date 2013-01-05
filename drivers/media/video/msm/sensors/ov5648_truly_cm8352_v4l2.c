@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All Rights Reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All Rights Reserved.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -806,6 +806,12 @@ static struct msm_camera_i2c_reg_conf ov5648_truly_cm8352_prev_settings[] = {
 	{0x3709, 0x52},
 	{0x370c, 0xc3},
 
+	{0x3500, 0x00}, // exposure [19:16]
+	{0x3501, 0x3d}, // exposure [15:8]
+	{0x3502, 0xc0}, // exposure [7:0], exposure
+	{0x350a, 0x00}, // gain[9:8]
+	{0x350b, 0x23}, // gain[7:0],
+
 	{0x3800, 0x00},//xstart = 0
 	{0x3801, 0x00},//x start
 	{0x3802, 0x00},//y start = 0
@@ -964,7 +970,14 @@ static struct msm_camera_i2c_reg_conf ov5648_truly_cm8352_video_90fps_settings[]
 
 static struct msm_camera_i2c_reg_conf ov5648_truly_cm8352_zsl_settings[] = {
 	{0x3035, 0x21}, //PLL
-//	{0x3501, 0x7b}, //exposure
+
+	{0x3500, 0x00}, // exposure [19:16]
+	{0x3501, 0x10}, // exposure [15:8]
+	{0x3502, 0x80}, // exposure [7:0], exposure
+	{0x3503, 0x03}, // gain has no delay, manual agc/aec
+	{0x350a, 0x00}, // gain[9:8]
+	{0x350b, 0x7f}, // gain[7:0],
+
 	{0x2502, 0x00}, //exposure
 	{0x3708, 0x63}, //
 	{0x3709, 0x12}, //
@@ -1035,12 +1048,12 @@ static struct msm_camera_i2c_reg_conf ov5648_truly_cm8352_recommend_settings[] =
 	{0x330f, 0x20},
 	{0x3300, 0x00},
 
-	{0x3500, 0x00}, // exposure [19:16]
-	{0x3501, 0x00}, // exposure [15:8]
-	{0x3502, 0x10}, // exposure [7:0], exposure = 0x3d0 = 976
+//	{0x3500, 0x00}, // exposure [19:16]
+//	{0x3501, 0x00}, // exposure [15:8]
+//	{0x3502, 0x10}, // exposure [7:0], exposure = 0x3d0 = 976
 	{0x3503, 0x07}, // gain has no delay, manual agc/aec
-	{0x350a, 0x00}, // gain[9:8]
-	{0x350b, 0x00}, // gain[7:0],
+//	{0x350a, 0x00}, // gain[9:8]
+//	{0x350b, 0x00}, // gain[7:0],
 
 	{0x3601, 0x33}, // analog control
 	{0x3602, 0x00}, // analog control
@@ -1771,7 +1784,6 @@ static int32_t ov5648_truly_cm8352_write_prev_exp_gain(struct msm_sensor_ctrl_t 
 		intg_time_hsb = (u8)(line>>16);
 		intg_time_msb = (u8) ((line & 0xFF00) >> 8);
 		intg_time_lsb = (u8) (line & 0x00FF);
-
 
 		/* Coarse Integration Time */
 		msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
