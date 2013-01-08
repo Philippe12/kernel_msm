@@ -3,7 +3,7 @@
  * Core MSM framebuffer driver.
  *
  * Copyright (C) 2007 Google Incorporated
- * Copyright (c) 2008-2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2013 The Linux Foundation. All Rights Reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1684,6 +1684,7 @@ static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 	struct mdp_dirty_region dirty;
 	struct mdp_dirty_region *dirtyPtr = NULL;
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
+	int notify_cnt = 0;
 
 	/*
 	 * If framebuffer is 2, io pen display is not allowed.
@@ -1745,7 +1746,12 @@ static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 
 		dirtyPtr = &dirty;
 	}
-	complete(&mfd->msmfb_update_notify);
+	/* FIXME: reduce fb change notification time to ease mess backlight configuration */
+	if (notify_cnt >= 6) {
+		notify_cnt = 0;
+		complete(&mfd->msmfb_update_notify);
+	} else
+		notify_cnt++;
 	mutex_lock(&msm_fb_notify_update_sem);
 	if (mfd->msmfb_no_update_notify_timer.function)
 		del_timer(&mfd->msmfb_no_update_notify_timer);
