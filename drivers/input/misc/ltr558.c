@@ -168,9 +168,6 @@ static int ltr558_light_enable(struct ltr558_data *ltr558)
 		error = ltr558_i2c_write_reg(LTR558_ALS_CONTR, MODE_ALS_ON_Range2);//03
 	else
 		error = 1;//flase arg value
-	// TODO: why enable Light need enable Proximity too?
-	ltr558_i2c_write_reg(LTR558_PS_CONTR, MODE_PS_ON_Gain1);
-
 	mdelay(WAKEUP_DELAY);	
   	return error;
 }
