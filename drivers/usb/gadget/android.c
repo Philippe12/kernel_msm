@@ -310,6 +310,7 @@ static int android_enable(struct android_dev *dev)
 			unbind_config(cdev, &android_config_driver);
 			return err;
 		}
+		usb_gadget_disconnect(cdev->gadget);
 		usb_gadget_connect(cdev->gadget);
 	}
 	return err;
