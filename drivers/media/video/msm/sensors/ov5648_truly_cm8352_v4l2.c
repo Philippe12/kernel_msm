@@ -349,7 +349,7 @@ static struct msm_camera_i2c_reg_conf ov5648_truly_cm8352_pip_snap_settings_mast
 	{0x383b, 0xa0},//	; 80 PIP Location
 
 	{0x4004, 0x04},//	; black line number
-//	{0x4005, 0x1a}, //BLC always update
+	{0x4005, 0x1a}, //BLC always update
 
 	{0x5b00, 0x02},
 	{0x5b01, 0x80},
