@@ -1684,7 +1684,7 @@ static int msm_fb_pan_display(struct fb_var_screeninfo *var,
 	struct mdp_dirty_region dirty;
 	struct mdp_dirty_region *dirtyPtr = NULL;
 	struct msm_fb_data_type *mfd = (struct msm_fb_data_type *)info->par;
-	int notify_cnt = 0;
+	static int notify_cnt = 0;
 
 	/*
 	 * If framebuffer is 2, io pen display is not allowed.
