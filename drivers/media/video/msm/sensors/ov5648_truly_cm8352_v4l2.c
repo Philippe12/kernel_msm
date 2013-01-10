@@ -2039,10 +2039,10 @@ int32_t ov5648_truly_cm8352_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 		s_ctrl->func_tbl->sensor_stop_stream(s_ctrl);
 		if (update_type != MSM_SENSOR_REG_INIT)
 		{
-			if (csi_config == 0 || res == 0)
-				msleep(66);
-			else
-				msleep(266);
+			//if (csi_config == 0 || res == 0)
+			//	msleep(66);
+			//else
+			//	msleep(266);
 
 			msm_camera_i2c_write(
 					s_ctrl->sensor_i2c_client,
@@ -2099,7 +2099,7 @@ int32_t ov5648_truly_cm8352_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 			{
 				esposure_delay_en = 1;
 			}
-
+    #if 0
 			if(!is_first_preview)
 			{
 				if(res == 0)
@@ -2116,6 +2116,7 @@ int32_t ov5648_truly_cm8352_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 				msleep(10);
 				is_first_preview = 0;
 			}
+	  #endif
 			if (res == MSM_SENSOR_RES_4)
 				v4l2_subdev_notify(&s_ctrl->sensor_v4l2_subdev,
 						NOTIFY_PCLK_CHANGE,
@@ -2131,10 +2132,10 @@ int32_t ov5648_truly_cm8352_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 		s_ctrl->func_tbl->sensor_stop_stream(s_ctrl);
 		if (update_type != MSM_SENSOR_REG_INIT)
 		{
-			if (csi_config == 0 || res == 0)
-				msleep(66);
-			else
-				msleep(266);
+			//if (csi_config == 0 || res == 0)
+			//	msleep(66);
+			//else
+			//	msleep(266);
 
 //			msm_camera_i2c_write(
 //					s_ctrl->sensor_i2c_client,
@@ -2200,7 +2201,7 @@ int32_t ov5648_truly_cm8352_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 			{
 				esposure_delay_en = 1;
 			}
-
+    #if 0
 			if(!is_first_preview)
 			{
 				if(res == 0)
@@ -2217,6 +2218,7 @@ int32_t ov5648_truly_cm8352_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 				msleep(10);
 				is_first_preview = 0;
 			}
+		#endif
 			if (res == MSM_SENSOR_RES_4)
 				v4l2_subdev_notify(&s_ctrl->sensor_v4l2_subdev,
 						NOTIFY_PCLK_CHANGE,
