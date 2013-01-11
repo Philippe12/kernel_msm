@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All Rights Reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -427,6 +427,14 @@ void msm_battery_update_psy_status(void)
 		sm_add_event (SM_POWER_EVENT|SM_POWER_EVENT_BATTERY_UPDATE, 0, 0, (void *)&battery_data, sizeof(battery_data));
 #endif
 
+	pr_debug("BATT: received, %d, %d, 0x%x; %d, %d, %d, %d; %d, %d, %d; %d, %d, %d\n",
+		  charger_status, charger_hardware, hide,
+		  battery_status, battery_voltage, battery_capacity, battery_temp,
+		  is_charging, is_charging_complete, is_charging_failed,
+		  reply_charger.battery_voltage >> 16,
+		  (reply_charger.battery_capacity >> 7) & 0x1FFF,
+		  reply_charger.battery_capacity >> 20);
+
 	if (charger_status	== msm_battery_info.charger_status &&
 	    charger_hardware	== msm_battery_info.charger_hardware &&
 	    hide		== msm_battery_info.hide &&
@@ -440,10 +448,7 @@ void msm_battery_update_psy_status(void)
 		goto done;
 	}
 
-	pr_debug("BATT: received, %d, %d, 0x%x; %d, %d, %d, %d; %d, %d, %d\n",
-		  charger_status, charger_hardware, hide,
-		  battery_status, battery_voltage, battery_capacity, battery_temp,
-		  is_charging, is_charging_complete, is_charging_failed);
+
 
 	if (msm_battery_info.charger_status != charger_status) {
 		if (msm_battery_info.charger_status == CHARGER_STATUS_NULL) {
