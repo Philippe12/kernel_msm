@@ -1483,9 +1483,9 @@ static int mipi_dsi_panel_skud_power(int on)
 		/*Toggle Bridge Reset GPIO*/
 		msleep(20);
 		gpio_set_value_cansleep(GPIO_SKUD_LCD_BRDG_RESET_N, 0);
-		msleep(20);
+		msleep(5);
 		gpio_set_value_cansleep(GPIO_SKUD_LCD_BRDG_RESET_N, 1);
-		msleep(20);
+		msleep(10);
 
 	} else {
 		gpio_tlmm_config(GPIO_CFG(GPIO_SKUD_LCD_BRDG_RESET_N, 0,
