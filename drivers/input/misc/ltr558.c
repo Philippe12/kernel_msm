@@ -78,6 +78,7 @@
 #define MODE_PS_ON_Gain8	0x0B
 #define MODE_PS_ON_Gain16	0x0f
 #define MODE_PS_StdBy		0x00
+#define MODE_ACTIVE			0x02
 
 #define PS_RANGE1 		1
 #define PS_RANGE2		2
@@ -168,6 +169,7 @@ static int ltr558_light_enable(struct ltr558_data *ltr558)
 		error = ltr558_i2c_write_reg(LTR558_ALS_CONTR, MODE_ALS_ON_Range2);//03
 	else
 		error = 1;//flase arg value
+	ltr558_i2c_write_reg(LTR558_PS_CONTR, MODE_PS_ON_Gain1);
 	mdelay(WAKEUP_DELAY);	
   	return error;
 }
@@ -725,16 +727,26 @@ done:
 
 static void ltr558_early_suspend(struct early_suspend *h)
 {
+	int power_ps;
+	int power_als;
 	struct ltr558_data *ltr558 =
 	    container_of(h, struct ltr558_data, early_suspend);
 
 	ltr558_dbgmsg("early suspend\n");
+	power_ps = ltr558_i2c_read_reg(LTR558_PS_CONTR);
+	power_als = ltr558_i2c_read_reg(LTR558_ALS_CONTR);
+	if(power_ps & MODE_ACTIVE)
+		ltr558->power_state |= PROXIMITY_ENABLED;
+	if(power_als & MODE_ACTIVE)
+		ltr558->power_state |= LIGHT_ENABLED;
 
 	if (ltr558->power_state & LIGHT_ENABLED)
 		ltr558_light_disable(ltr558);
 
 	if (ltr558->power_state & PROXIMITY_ENABLED)
 		ltr558_proximity_disable(ltr558);
+	ltr558->power_state &= ~PROXIMITY_ENABLED;
+	ltr558->power_state &= ~LIGHT_ENABLED;
 }
 
 static void ltr558_late_resume(struct early_suspend *h)
