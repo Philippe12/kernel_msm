@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All Rights Reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -187,10 +187,19 @@ static int msm_sdcc_setup_gpio(int dev_id, unsigned int enable)
 	return rc;
 }
 
-static int msm_sdcc_setup_vreg(int dev_id, unsigned int enable)
+static int msm_sdcc_setup_vreg(int dev_id, unsigned int vdd)
 {
 	int rc = 0;
 	struct regulator *curr = sdcc_vreg_data[dev_id - 1];
+	unsigned int enable = !!vdd;
+
+	if (dev_id == 3 && ((vdd == 2900000) || (vdd == 1900000))) {
+		rc = regulator_set_voltage(sdcc_vreg_data[2], vdd, vdd);
+		if (rc) {
+			pr_err("could not set voltage for emmc %d\n", rc);
+		}
+		return rc;
+	}
 
 	if (test_bit(dev_id, &vreg_sts) == enable)
 		return 0;
@@ -233,7 +242,7 @@ static uint32_t msm_sdcc_setup_power(struct device *dv, unsigned int vdd)
 	if (rc)
 		goto out;
 
-	rc = msm_sdcc_setup_vreg(pdev->id, !!vdd);
+	rc = msm_sdcc_setup_vreg(pdev->id, vdd);
 out:
 	return rc;
 }
