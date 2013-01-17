@@ -1,7 +1,7 @@
 /* kernel/power/wakelock.c
  *
  * Copyright (C) 2005-2008 Google, Inc.
- * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012-2013 The Linux Foundation. All Rights Reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -209,13 +209,16 @@ static void update_sleep_wait_stats_locked(int done)
 void add_active_wakelock_event(void)
 {
 	struct wake_lock *lock, *n;
+	unsigned long irqflags;
 	int type;
 
+	spin_lock_irqsave(&list_lock, irqflags);
 	for (type = 0; type < WAKE_LOCK_TYPE_COUNT; type++) {
 		list_for_each_entry_safe(lock, n, &active_wake_locks[type], link) {
 			sm_add_event(SM_WAKELOCK_EVENT | WAKELOCK_EVENT_ON, (uint32_t)(lock->expires - jiffies), 0, (void *)lock->name, strlen(lock->name)+1);
 		}
 	}
+	spin_unlock_irqrestore(&list_lock, irqflags);
 }
 EXPORT_SYMBOL(add_active_wakelock_event);
 #endif
