@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All Rights Reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All Rights Reserved.
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
@@ -325,6 +325,7 @@ static struct msm_camera_i2c_reg_conf ar0542_init_settings_conf[] = {
   {0x0306,0x002E},
   {0x0308,0x000a},
   {0x030A,0x0001},
+  {0x3100,0x0000},
 };
 
 static struct msm_camera_i2c_conf_array ar0542_init_settings[] = {
