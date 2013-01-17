@@ -658,6 +658,8 @@ int32_t pip_ov5648_ctrl(int cmd, struct msm_camera_pip_ctl *pip_ctl)
 	int rc = 0;
 	struct msm_camera_i2c_client sensor_i2c_client;
 	struct i2c_client client;
+	unsigned short rdata = 0;
+
 	CDBG("%s IN, cmd:%d\r\n", __func__, cmd);
 	switch(cmd)
 	{
@@ -676,6 +678,11 @@ int32_t pip_ov5648_ctrl(int cmd, struct msm_camera_pip_ctl *pip_ctl)
 				rc = msm_sensor_write_all_conf_array(
 					&sensor_i2c_client, &ov5648_truly_cm8352_pip_init_conf_master[0],
 					ARRAY_SIZE(ov5648_truly_cm8352_pip_init_conf_master));
+				msm_camera_i2c_read(&sensor_i2c_client, 0x4800, &rdata,
+				MSM_CAMERA_I2C_BYTE_DATA);
+				rdata |= 0x20;
+				msm_camera_i2c_write(&sensor_i2c_client, 0x4800, rdata,
+				MSM_CAMERA_I2C_BYTE_DATA);//Enable sensor gate clk
 			}
 			else
 			{
@@ -683,7 +690,6 @@ int32_t pip_ov5648_ctrl(int cmd, struct msm_camera_pip_ctl *pip_ctl)
 				&sensor_i2c_client,
 				&ov5648_truly_cm8352_pip_preview_conf_slave[0], pip_ctl->write_ctl);
 			}
-			break;
 			break;
 		case PIP_CRL_POWERUP:
 			if(0 != ov5648_pwdn_pin)
@@ -734,18 +740,18 @@ int32_t pip_ov5648_ctrl(int cmd, struct msm_camera_pip_ctl *pip_ctl)
 				msm_camera_i2c_write(&sensor_i2c_client, 0x100, 0x0,
 					MSM_CAMERA_I2C_BYTE_DATA);
 			break;
-			case PIP_CTL_STANDBY_EXIT:
-					if(NULL == pip_ctl){
-						CDBG("%s parameters check error, exit\r\n", __func__);
-						return rc;
-					}
-					memcpy(&sensor_i2c_client, pip_ctl->sensor_i2c_client, sizeof(struct msm_camera_i2c_client));
-					memcpy(&client, pip_ctl->sensor_i2c_client->client, sizeof(struct i2c_client));
-					client.addr = ov5648_i2c_address;
-					sensor_i2c_client.client = &client;
-					msm_camera_i2c_write(&sensor_i2c_client, 0x100, 0x1,
-						MSM_CAMERA_I2C_BYTE_DATA);
-				break;
+		case PIP_CTL_STANDBY_EXIT:
+				if(NULL == pip_ctl){
+					CDBG("%s parameters check error, exit\r\n", __func__);
+					return rc;
+				}
+				memcpy(&sensor_i2c_client, pip_ctl->sensor_i2c_client, sizeof(struct msm_camera_i2c_client));
+				memcpy(&client, pip_ctl->sensor_i2c_client->client, sizeof(struct i2c_client));
+				client.addr = ov5648_i2c_address;
+				sensor_i2c_client.client = &client;
+				msm_camera_i2c_write(&sensor_i2c_client, 0x100, 0x1,
+					MSM_CAMERA_I2C_BYTE_DATA);
+			break;
 		case PIP_CTL_STREAM_ON:
 				if(NULL == pip_ctl){
 					CDBG("%s parameters check error, exit\r\n", __func__);
@@ -755,21 +761,45 @@ int32_t pip_ov5648_ctrl(int cmd, struct msm_camera_pip_ctl *pip_ctl)
 				memcpy(&client, pip_ctl->sensor_i2c_client->client, sizeof(struct i2c_client));
 				client.addr = ov5648_i2c_address;
 				sensor_i2c_client.client = &client;
-				msm_camera_i2c_write(&sensor_i2c_client, 0x4202, 0x0,
+				msm_camera_i2c_write(&sensor_i2c_client, 0x301a, 0xf0,
 					MSM_CAMERA_I2C_BYTE_DATA);
 			break;
-			case PIP_CTL_STREAM_OFF:
-					if(NULL == pip_ctl){
-						CDBG("%s parameters check error, exit\r\n", __func__);
-						return rc;
-					}
-					memcpy(&sensor_i2c_client, pip_ctl->sensor_i2c_client, sizeof(struct msm_camera_i2c_client));
-					memcpy(&client, pip_ctl->sensor_i2c_client->client, sizeof(struct i2c_client));
-					client.addr = ov5648_i2c_address;
-					sensor_i2c_client.client = &client;
-					msm_camera_i2c_write(&sensor_i2c_client, 0x4202, 0x0f,
-						MSM_CAMERA_I2C_BYTE_DATA);
+		case PIP_CTL_STREAM_OFF:
+				if(NULL == pip_ctl){
+					CDBG("%s parameters check error, exit\r\n", __func__);
+					return rc;
+				}
+				memcpy(&sensor_i2c_client, pip_ctl->sensor_i2c_client, sizeof(struct msm_camera_i2c_client));
+				memcpy(&client, pip_ctl->sensor_i2c_client->client, sizeof(struct i2c_client));
+				client.addr = ov5648_i2c_address;
+				sensor_i2c_client.client = &client;
+				msm_camera_i2c_write(&sensor_i2c_client, 0x301a, 0xf1,
+					MSM_CAMERA_I2C_BYTE_DATA);
 				break;
+		case PIP_CTL_RESET_HW_DOWN:
+			if(0 != ov5648_reset_pin)
+			{
+				CDBG("PIP ctrl, set the gpio:%d to 0\r\n", ov5648_reset_pin);
+				gpio_direction_output(ov5648_reset_pin, 0);
+			}
+			break;
+		case PIP_CTL_MIPI_DOWN:
+			if(NULL == pip_ctl){
+				CDBG("%s parameters check error, exit\r\n", __func__);
+				return rc;
+			}
+			memcpy(&sensor_i2c_client, pip_ctl->sensor_i2c_client, sizeof(struct msm_camera_i2c_client));
+			memcpy(&client, pip_ctl->sensor_i2c_client->client, sizeof(struct i2c_client));
+			client.addr = ov5648_i2c_address;
+			sensor_i2c_client.client = &client;
+			rc = msm_camera_i2c_read(&sensor_i2c_client, 0x3018,
+				&rdata, MSM_CAMERA_I2C_BYTE_DATA);
+			CDBG("ov5648_truly_cm8352_sensor_power_down: %d\n", rc);
+			rdata |= 0x18;
+			msm_camera_i2c_write(&sensor_i2c_client,
+				0x3018, rdata,
+				MSM_CAMERA_I2C_BYTE_DATA);
+			break;
 		default:
 				break;
 	}
@@ -1936,12 +1966,11 @@ static struct v4l2_subdev_ops ov5648_truly_cm8352_subdev_ops = {
 
 int32_t ov5648_truly_cm8352_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 {
-	struct msm_camera_sensor_info *info = NULL;
+	struct msm_camera_sensor_info *info = s_ctrl->sensordata;
 	unsigned short rdata;
 	int rc;
-	CDBG("%s IN\r\n", __func__);
 
-	info = s_ctrl->sensordata;
+	CDBG("%s IN\r\n", __func__);
 	msm_camera_i2c_write(s_ctrl->sensor_i2c_client,
 		0x4202, 0xf,
 		MSM_CAMERA_I2C_BYTE_DATA);
@@ -1962,8 +1991,6 @@ int32_t ov5648_truly_cm8352_sensor_power_down(struct msm_sensor_ctrl_t *s_ctrl)
 	}
 	/* PIP end */
 
-	usleep_range(5000, 5100);
-	gpio_direction_output(info->sensor_reset, 0);
 	usleep_range(5000, 5100);
 	gpio_direction_output(info->sensor_reset, 0);
 	usleep_range(5000, 5100);
