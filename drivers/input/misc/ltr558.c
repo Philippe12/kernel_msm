@@ -1,10 +1,10 @@
 /*
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
- * 
+ * Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
  * only version 2 as published by the Free Software Foundation.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -28,13 +28,14 @@
 #include <linux/workqueue.h>
 #include <linux/uaccess.h>
 #include <linux/earlysuspend.h>
+#include <linux/input/ltr5xx.h>
 
 
-#define DEBUG_LTR558
+//#define DEBUG_LTR558
 #ifdef DEBUG_LTR558
-#define ltr558_dbgmsg(str, args...) printk("%s: " str, __func__, ##args)
+#define LTR558_DBGMSG(str, args...) printk("%s: " str, __func__, ##args)
 #else
-#define ltr558_dbgmsg(str, args...)
+#define LTR558_DBGMSG(str, args...)
 #endif
 
 /* LTR-558 Registers */
@@ -80,6 +81,13 @@
 #define MODE_PS_StdBy		0x00
 #define MODE_ACTIVE			0x02
 
+#define INTERRUPT_OP_MODE	0x08	/* updated after every measurement*/
+#define INTERRUPT_POLARITY	0x00	/* low active */
+#define ENABLE_PS_INTERRUPT	0x01
+#define ENABLE_ALS_INTERRUPT	0x02
+
+#define DEFAULT_INT_MODE	(INTERRUPT_OP_MODE | INTERRUPT_POLARITY)
+
 #define PS_RANGE1 		1
 #define PS_RANGE2		2
 #define PS_RANGE4 		4
@@ -103,22 +111,21 @@ enum {
 struct ltr558_data {
 	bool on;
 	u8 power_state;
-	struct ltr558_platform_data *pdata;
-	struct i2c_client *i2c_client;
-	struct mutex lock;
+	struct ltr5xx_platform_data *pdata;
+	struct i2c_client 		*i2c_client;
+	struct mutex 			lock;
 	struct workqueue_struct *wq;
-	struct early_suspend early_suspend;
+	struct early_suspend 	early_suspend;
+	struct wake_lock 		prx_wake_lock;
 
-	struct input_dev *light_input_dev;
-	struct work_struct work_light;
-	struct hrtimer light_timer;
-	ktime_t light_poll_delay;
+	struct input_dev 		*light_input_dev;
+	struct work_struct 		work_light;
+	struct hrtimer 			light_timer;
+	ktime_t 				light_poll_delay;
 
-	struct input_dev *proximity_input_dev;
-	struct work_struct work_proximity;
-	struct hrtimer proximity_timer;
-	ktime_t proximity_poll_delay;
-	struct wake_lock prx_wake_lock;
+	struct input_dev 		*proximity_input_dev;
+	struct work_struct 		work_proximity;
+	bool					ps_is_near_state;
 };
 
 static int ps_gainrange;
@@ -151,13 +158,13 @@ static int ltr558_i2c_write_reg(u8 regnum, u8 value)
 static int ltr558_light_enable(struct ltr558_data *ltr558)
 {
 	int error=0;
-	ltr558_dbgmsg("ltr558_light_enable\n");
-	/* =============== 
-	 * ** IMPORTANT **
-	 * ===============
-	 * Other settings like timing and threshold to be set here, if required.
- 	 * Not set and kept as device default for now.
- 	 */
+	LTR558_DBGMSG("ltr558_light_enable\n");
+	/* ===============
+	* ** IMPORTANT **
+	* ===============
+	* Other settings like timing and threshold to be set here, if required.
+	* Not set and kept as device default for now.
+	*/
         ltr558_i2c_write_reg(LTR558_ALS_THRES_LOW_0, 0xff); //0xff
         ltr558_i2c_write_reg(LTR558_ALS_THRES_LOW_1, 0xff); //0xff
         ltr558_i2c_write_reg(LTR558_ALS_THRES_UP_0, 0); //0
@@ -169,17 +176,15 @@ static int ltr558_light_enable(struct ltr558_data *ltr558)
 		error = ltr558_i2c_write_reg(LTR558_ALS_CONTR, MODE_ALS_ON_Range2);//03
 	else
 		error = 1;//flase arg value
-	ltr558_i2c_write_reg(LTR558_PS_CONTR, MODE_PS_ON_Gain1);
-	mdelay(WAKEUP_DELAY);	
-  	return error;
+
+	msleep(WAKEUP_DELAY);
+	return error;
 }
 
 static int ltr558_light_disable(struct ltr558_data *ltr558)
 {
 	int error;
-	if (!(ltr558->power_state & PROXIMITY_ENABLED))
-		ltr558_i2c_write_reg(LTR558_PS_CONTR, MODE_PS_StdBy); 
-	error = ltr558_i2c_write_reg(LTR558_ALS_CONTR, MODE_ALS_StdBy); 
+	error = ltr558_i2c_write_reg(LTR558_ALS_CONTR, MODE_ALS_StdBy);
 	return error;
 }
 
@@ -202,7 +207,7 @@ static ssize_t light_poll_delay_store(struct device *dev,
 	if (err < 0)
 		return err;
 
-	ltr558_dbgmsg("new delay = %lldns, old delay = %lldns\n",
+	LTR558_DBGMSG("new delay = %lldns, old delay = %lldns\n",
 		      new_delay, ktime_to_ns(ltr558->light_poll_delay));
 	mutex_lock(&ltr558->lock);
 	if (new_delay != ktime_to_ns(ltr558->light_poll_delay)) {
@@ -245,7 +250,7 @@ static ssize_t light_enable_store(struct device *dev,
 	}
 
 	mutex_lock(&ltr558->lock);
-	ltr558_dbgmsg("new_value = %d, old state = %d\n",
+	LTR558_DBGMSG("new_value = %d, old state = %d\n",
 		      new_value, (ltr558->power_state & LIGHT_ENABLED) ? 1 : 0);
 	if (new_value && !(ltr558->power_state & LIGHT_ENABLED)) {
 		if (!ltr558_light_enable(ltr558)) {
@@ -270,17 +275,11 @@ static ssize_t light_enable_store(struct device *dev,
 
 static int ltr558_proximity_enable(struct ltr558_data *ltr558)
 {
-	int error=0;
 	int setgain;
-        char buf[4] = {0};
-	ltr558_dbgmsg("ltr558_proximity_enable\n");      
-	/* =============== 
-	 * ** IMPORTANT **
-	 * ===============
-	 * Other settings like timing and threshold to be set here, if required.
- 	 * Not set and kept as device default for now.
- 	 */
-      
+	char buf[4] = {0};
+
+	LTR558_DBGMSG("ltr558_proximity_enable\n");
+
 	buf[0] = prox_threshold_lo & 0x0ff;
 	buf[1] = (prox_threshold_lo >> 8) & 0x07;
 	buf[2] = prox_threshold_hi & 0x0ff;  //up
@@ -308,58 +307,26 @@ static int ltr558_proximity_enable(struct ltr558_data *ltr558)
 			break;
 	}
 
-	ltr558_i2c_write_reg(LTR558_PS_CONTR, setgain); 
-	mdelay(WAKEUP_DELAY);
+	setgain |= MODE_ACTIVE;
+	if(ltr558_i2c_write_reg(LTR558_PS_CONTR, setgain)){
+		pr_err("%s: write PS control error .\n", __func__);
+	}
+	msleep(WAKEUP_DELAY);
 
-        ltr558_dbgmsg("WAKEUP_DELAY 10ms after write cmd registes\n");
-	return error;
+	LTR558_DBGMSG("WAKEUP_DELAY 10ms after write cmd register.\n");
+	return 0; /* always return true since error state is not handled by caller */
 }
 
 static int ltr558_proximity_disable(struct ltr558_data *ltr558)
 {
-	int error;
-	error = ltr558_i2c_write_reg(LTR558_PS_CONTR, MODE_PS_StdBy); 
-	return error;
-}
-
-static ssize_t proximity_poll_delay_show(struct device *dev,
-					 struct device_attribute *attr,
-					 char *buf)
-{
-	struct ltr558_data *ltr558 = dev_get_drvdata(dev);
-	return sprintf(buf, "%lld\n",
-		       ktime_to_ns(ltr558->proximity_poll_delay));
-}
-
-static ssize_t proximity_poll_delay_store(struct device *dev,
-					  struct device_attribute *attr,
-					  const char *buf, size_t size)
-{
-	struct ltr558_data *ltr558 = dev_get_drvdata(dev);
-	int64_t new_delay;
 	int err;
-
-	err = strict_strtoll(buf, 10, &new_delay);
-	if (err < 0)
-		return err;
-
-	ltr558_dbgmsg("new delay = %lldns, old delay = %lldns\n",
-		      new_delay, ktime_to_ns(ltr558->proximity_poll_delay));
-	mutex_lock(&ltr558->lock);
-	if (new_delay != ktime_to_ns(ltr558->proximity_poll_delay)) {
-		ltr558->proximity_poll_delay = ns_to_ktime(new_delay);
-		if (ltr558->power_state & PROXIMITY_ENABLED) {
-			hrtimer_cancel(&ltr558->proximity_timer);
-			cancel_work_sync(&ltr558->work_proximity);
-			hrtimer_start(&ltr558->proximity_timer,
-				      ltr558->proximity_poll_delay,
-				      HRTIMER_MODE_REL);
-		}
+	err = ltr558_i2c_write_reg(LTR558_PS_CONTR, MODE_PS_StdBy);
+	if(err){
+		pr_err("%s: write PS interrupt control error %d.\n", __func__, err);
 	}
-	mutex_unlock(&ltr558->lock);
-
-	return size;
+	return err;
 }
+
 
 static ssize_t proximity_enable_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
@@ -387,24 +354,18 @@ static ssize_t proximity_enable_store(struct device *dev,
 	}
 
 	mutex_lock(&ltr558->lock);
-	ltr558_dbgmsg("new_value = %d, old state = %d\n",
-		      new_value,
+	LTR558_DBGMSG("%s, new_value = %d, old state = %d\n",
+		      __func__, new_value,
 		      (ltr558->power_state & PROXIMITY_ENABLED) ? 1 : 0);
 	if (new_value && !(ltr558->power_state & PROXIMITY_ENABLED)) {
 		if (!ltr558_proximity_enable(ltr558)) {
 			ret = size;
 			ltr558->power_state |= PROXIMITY_ENABLED;
-			wake_lock(&ltr558->prx_wake_lock);
-			hrtimer_start(&ltr558->proximity_timer,
-				      ltr558->proximity_poll_delay,
-				      HRTIMER_MODE_REL);
 		}
 	} else if (!new_value && (ltr558->power_state & PROXIMITY_ENABLED)) {
 		if (!ltr558_proximity_disable(ltr558)) {
 			ret = size;
 			ltr558->power_state &= ~PROXIMITY_ENABLED;
-			wake_unlock(&ltr558->prx_wake_lock);
-			hrtimer_cancel(&ltr558->proximity_timer);
 			cancel_work_sync(&ltr558->work_proximity);
 		}
 	}
@@ -430,8 +391,6 @@ static struct attribute_group light_attribute_group = {
 	.attrs = light_sysfs_attrs,
 };
 
-static DEVICE_ATTR(proximity_poll_delay, S_IRUGO | S_IWUSR | S_IWGRP,
-		   proximity_poll_delay_show, proximity_poll_delay_store);
 
 static struct device_attribute dev_attr_proximity_enable =
 __ATTR(enable, S_IRUGO | S_IWUSR | S_IWGRP,
@@ -439,7 +398,6 @@ __ATTR(enable, S_IRUGO | S_IWUSR | S_IWGRP,
 
 static struct attribute *proximity_sysfs_attrs[] = {
 	&dev_attr_proximity_enable.attr,
-	&dev_attr_proximity_poll_delay.attr,
 	NULL
 };
 
@@ -452,31 +410,54 @@ static void ltr558_work_func_proximity(struct work_struct *work)
 	struct ltr558_data *ltr558 = container_of(work, struct ltr558_data,
 						  work_proximity);
 	int psval_lo, psval_hi, psdata;
-        int ret = 0;
-        int data = 0;
+	int	retry_count = 3;
+    int data = 0;
 
-	psval_lo = ltr558_i2c_read_reg(LTR558_PS_DATA_0);
-	if (psval_lo < 0){
-		psdata = psval_lo;
-		goto out;
+	for(psval_lo =-1, psval_hi=-1; retry_count > 0 ; retry_count--){
+		psval_lo = ltr558_i2c_read_reg(LTR558_PS_DATA_0);
+		psval_hi = ltr558_i2c_read_reg(LTR558_PS_DATA_1);
+		if ((psval_lo < 0) || (psval_hi < 0)){
+			usleep(50000);
+			continue;
+		}
 	}
-	psval_hi = ltr558_i2c_read_reg(LTR558_PS_DATA_1);
-	if (psval_hi < 0){
-		psdata = psval_hi;
+	if(psval_lo < 0 || psval_hi < 0 ){
 		goto out;
 	}
 	psdata = ((psval_hi & 7)* 256) + psval_lo;
-        ltr558_dbgmsg(">>>%s : primitive prox_data psdata = %d\n", __func__, psdata); 
-        if (psdata < prox_threshold_lo)  //far
-               data = 2;
-        else if (psdata > prox_threshold_hi) //near
-               data = 0;
+    if (psdata < prox_threshold_lo){  /* far */
+		data = 2;
+		ltr558->ps_is_near_state = false;
+		ltr558_i2c_write_reg(LTR558_PS_THRES_LOW_0, 0);
+		ltr558_i2c_write_reg(LTR558_PS_THRES_LOW_1, 0);
+		ltr558_i2c_write_reg(LTR558_PS_THRES_UP_0,  prox_threshold_hi & 0xFF);
+		ltr558_i2c_write_reg(LTR558_PS_THRES_UP_1,  ((prox_threshold_hi >> 8) & 0x07));
+		input_report_abs(ltr558->proximity_input_dev, ABS_DISTANCE, data);
+		input_sync(ltr558->proximity_input_dev);
+    }
+    else if (psdata > prox_threshold_hi){ /* near */
+		data = 0;
+		ltr558->ps_is_near_state = true;
 
-        ret = data;
+		ltr558_i2c_write_reg(LTR558_PS_THRES_LOW_0, prox_threshold_lo & 0xFF);
+		ltr558_i2c_write_reg(LTR558_PS_THRES_LOW_1, ((prox_threshold_lo >> 8) & 0x07));
+		ltr558_i2c_write_reg(LTR558_PS_THRES_UP_0,	0xFF);
+		ltr558_i2c_write_reg(LTR558_PS_THRES_UP_1,	0x07);
+		input_report_abs(ltr558->proximity_input_dev, ABS_DISTANCE, data);
+		input_sync(ltr558->proximity_input_dev);
+    }
+	else{
+		/* setup threshold for next interrupt detection */
+		ltr558_i2c_write_reg(LTR558_PS_THRES_LOW_0, prox_threshold_lo & 0x0ff);
+		ltr558_i2c_write_reg(LTR558_PS_THRES_LOW_1, ((prox_threshold_lo >> 8) & 0x07));
+		ltr558_i2c_write_reg(LTR558_PS_THRES_UP_0,  prox_threshold_hi & 0x0ff);
+		ltr558_i2c_write_reg(LTR558_PS_THRES_UP_1,  ((prox_threshold_hi >> 8) & 0x07));
+	}
+	LTR558_DBGMSG(">>>%s : primitive prox_data psdata = %d mode=%d.\n", __func__, psdata, data);
+	return;
 
-	input_report_abs(ltr558->proximity_input_dev, ABS_DISTANCE, data);
-	input_sync(ltr558->proximity_input_dev);
 out:
+	pr_err("%s, error occured psval_lo=%d, psval_hi=%d.\n", __func__, psval_lo, psval_hi);
 	return;
 }
 
@@ -499,15 +480,12 @@ static void ltr558_work_func_light(struct work_struct *work)
 		alsval_ch1_lo = ltr558_i2c_read_reg(LTR558_ALS_DATA_CH1_0);
 		alsval_ch1_hi = ltr558_i2c_read_reg(LTR558_ALS_DATA_CH1_1);
 		alsval_ch1 = (alsval_ch1_hi * 256) + alsval_ch1_lo;
-		ltr558_dbgmsg(">>>>>%s: alsval_ch1 = %d \n", __func__, alsval_ch1);
 
 		alsval_ch0_lo = ltr558_i2c_read_reg(LTR558_ALS_DATA_CH0_0);
 		alsval_ch0_hi = ltr558_i2c_read_reg(LTR558_ALS_DATA_CH0_1);
 		alsval_ch0 = (alsval_ch0_hi * 256) + alsval_ch0_lo;
 
-		ltr558_dbgmsg(">>>>>%s: alsval_ch0 = %d \n", __func__, alsval_ch0);
 		ratio = (alsval_ch1 * 1000)  / (alsval_ch0+alsval_ch1);   //*1000
-		ltr558_dbgmsg(">>>>>%s: ratio = %d \n", __func__, ratio);
 
 		if (ratio > 850){
 			ch0_coeff = 0;
@@ -522,9 +500,9 @@ static void ltr558_work_func_light(struct work_struct *work)
 			ch0_coeff = 17743;
 			ch1_coeff = -11059;
 		}
-     
+
 		lux_val = (alsval_ch0*ch0_coeff - alsval_ch1*ch1_coeff)/100000; //0 to 75 in lux adjust 10000->100000
-		ltr558_dbgmsg(">>>>>%s: lux val is = %d \n", __func__, lux_val);
+		LTR558_DBGMSG(">>>>>%s: lux = %d, ch0=%d, ch1=%d, ratio=%d \n", __func__, lux_val, alsval_ch0, alsval_ch1, ratio);
 		input_report_abs(ltr558->light_input_dev, ABS_MISC,lux_val);
 		input_sync(ltr558->light_input_dev);
 	}
@@ -544,18 +522,19 @@ static enum hrtimer_restart ltr558_light_timer_func(struct hrtimer *timer)
 	return HRTIMER_RESTART;
 }
 
-/* This function is for proximity sensor.  It operates every a few seconds.
- * It asks for work to be done on a thread because i2c needs a thread
- * context (slow and blocking) and then reschedules the timer to run again.
- */
-static enum hrtimer_restart ltr558_pxy_timer_func(struct hrtimer *timer)
+/* assume this is ISR */
+static irqreturn_t ltr558_interrupt(int vec, void *info)
 {
-	struct ltr558_data *ltr558 = container_of(timer, struct ltr558_data,
-						  proximity_timer);
-	queue_work(ltr558->wq, &ltr558->work_proximity);
-	hrtimer_forward_now(&ltr558->proximity_timer,
-			    ltr558->proximity_poll_delay);
-	return HRTIMER_RESTART;
+	struct i2c_client *client=(struct i2c_client *)info;
+	struct ltr558_data *data = i2c_get_clientdata(client);
+
+	LTR558_DBGMSG("==> ltr558_interrupt (timeout)\n");
+	//Seems linux-3.0 trends to use threaded-interrupt, so we can call the work directly.
+	wake_lock(&data->prx_wake_lock);
+	ltr558_work_func_proximity(&data->work_proximity);
+	wake_unlock(&data->prx_wake_lock);
+
+	return IRQ_HANDLED;
 }
 
 static int ltr558_hardware_init(void)
@@ -564,7 +543,7 @@ static int ltr558_hardware_init(void)
 	int init_ps_gain;
 	int init_als_gain;
 
-	mdelay(PON_DELAY);
+	msleep(PON_DELAY);
 
 	// full Gain1 at startup
 	init_ps_gain = PS_RANGE1;
@@ -573,18 +552,19 @@ static int ltr558_hardware_init(void)
 	// Full Range at startup
 	init_als_gain = ALS_RANGE1_320;
 	als_gainrange = init_als_gain;
-        als_integration_time = ALS_INTEGRATION_TIME;
-  
-	ret = ltr558_i2c_write_reg(LTR558_INTERRUPT, 0x0b);//0x08
+	als_integration_time = ALS_INTEGRATION_TIME;
+	/* Must enable INT before activate */
+	ret = ltr558_i2c_write_reg(LTR558_INTERRUPT, DEFAULT_INT_MODE | ENABLE_PS_INTERRUPT);
 	if (ret < 0) {
-		ltr558_dbgmsg("ltr558_hardware_init fail\n");	
+		LTR558_DBGMSG("ltr558_hardware_init fail\n");
 		return ret;
 	}
-	ltr558_i2c_write_reg(LTR558_PS_LED, 0x7b);    
-	ltr558_i2c_write_reg(LTR558_PS_N_PULSES, 0x08);
-	ltr558_i2c_write_reg(LTR558_PS_MEAS_RATE, 0x02);
-	
-	ltr558_dbgmsg("ltr558_hardware_init success\n");
+	ltr558_i2c_write_reg(LTR558_PS_LED, 0x7b);			/* 60K HZ 100% duty cycle 50mA */
+	ltr558_i2c_write_reg(LTR558_PS_N_PULSES, 0x08);		/* 8 pulses */
+	ltr558_i2c_write_reg(LTR558_PS_MEAS_RATE, 0x02);	/* 100ms integration, 200ms repreat */
+	ltr558_i2c_write_reg(LTR558_INTERRUPT_PERSIST, 0x00);
+
+	LTR558_DBGMSG("ltr558_hardware_init success\n");
 	return ret;
 }
 
@@ -607,8 +587,10 @@ static int ltr558_i2c_probe(struct i2c_client *client,
 		return -ENOMEM;
 	}
 
+	ltr558->pdata = client->dev.platform_data;
 	ltr558->power_state = 0;
 	ltr558->i2c_client = client;
+	ltr558->ps_is_near_state = false;
 	ltr588_client = ltr558->i2c_client;
 	i2c_set_clientdata(client, ltr558);
 
@@ -632,7 +614,7 @@ static int ltr558_i2c_probe(struct i2c_client *client,
 	input_set_capability(input_dev, EV_ABS, ABS_DISTANCE);
 	input_set_abs_params(input_dev, ABS_DISTANCE, 0, 1, 0, 0);
 
-	ltr558_dbgmsg("registering proximity input device\n");
+	LTR558_DBGMSG("registering proximity input device\n");
 	ret = input_register_device(input_dev);
 	if (ret < 0) {
 		pr_err("%s: could not register input device\n", __func__);
@@ -645,15 +627,33 @@ static int ltr558_i2c_probe(struct i2c_client *client,
 		pr_err("%s: could not create sysfs group\n", __func__);
 		goto err_sysfs_create_group_proximity;
 	}
-	/* this is the thread function we run on the work queue */
-	INIT_WORK(&ltr558->work_proximity, ltr558_work_func_proximity);
+	/* allocate lightsensor-level input_device */
+	input_dev = input_allocate_device();
+	if (!input_dev) {
+		pr_err("%s: could not allocate input device\n", __func__);
+		ret = -ENOMEM;
+		goto err_input_allocate_device_light;
+	}
+	input_set_drvdata(input_dev, ltr558);
+	input_dev->name = "light";
+	input_set_capability(input_dev, EV_ABS, ABS_MISC);
+	input_set_abs_params(input_dev, ABS_MISC, 0, 1, 0, 0);
 
-	/* proximity hrtimer settings.  we poll for light values using a timer. */
-	hrtimer_init(&ltr558->proximity_timer, CLOCK_MONOTONIC,
-		     HRTIMER_MODE_REL);
-	ltr558->proximity_poll_delay = ns_to_ktime(200 * NSEC_PER_MSEC);
-	ltr558->proximity_timer.function = ltr558_pxy_timer_func;
+	LTR558_DBGMSG("registering light sensor input device\n");
+	ret = input_register_device(input_dev);
+	if (ret < 0) {
+		pr_err("%s: could not register input device\n", __func__);
+		input_free_device(input_dev);
+		goto err_input_register_device_light;
+	}
+	ltr558->light_input_dev = input_dev;
+	ret = sysfs_create_group(&input_dev->dev.kobj, &light_attribute_group);
+	if (ret) {
+		pr_err("%s: could not create sysfs group\n", __func__);
+		goto err_sysfs_create_group_light;
+	}
 
+	/* initialize timer for polling and workqueue for i2c reading */
 	/* light hrtimer settings.  we poll for light values using a timer. */
 	hrtimer_init(&ltr558->light_timer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
 	ltr558->light_poll_delay = ns_to_ktime(1000 * NSEC_PER_MSEC);
@@ -670,83 +670,110 @@ static int ltr558_i2c_probe(struct i2c_client *client,
 	/* this is the thread function we run on the work queue */
 	INIT_WORK(&ltr558->work_light, ltr558_work_func_light);
 
-	/* allocate lightsensor-level input_device */
-	input_dev = input_allocate_device();
-	if (!input_dev) {
-		pr_err("%s: could not allocate input device\n", __func__);
-		ret = -ENOMEM;
-		goto err_input_allocate_device_light;
-	}
-	input_set_drvdata(input_dev, ltr558);
-	input_dev->name = "light";
-	input_set_capability(input_dev, EV_ABS, ABS_MISC);
-	input_set_abs_params(input_dev, ABS_MISC, 0, 1, 0, 0);
-
-	ltr558_dbgmsg("registering light sensor input device\n");
-	ret = input_register_device(input_dev);
-	if (ret < 0) {
-		pr_err("%s: could not register input device\n", __func__);
-		input_free_device(input_dev);
-		goto err_input_register_device_light;
-	}
-	ltr558->light_input_dev = input_dev;
-	ret = sysfs_create_group(&input_dev->dev.kobj, &light_attribute_group);
-	if (ret) {
-		pr_err("%s: could not create sysfs group\n", __func__);
-		goto err_sysfs_create_group_light;
-	}
-
+	/* this is the thread function we run on the work queue */
+	INIT_WORK(&ltr558->work_proximity, ltr558_work_func_proximity);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	/* register suspend/resume function */
 	ltr558->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
 	ltr558->early_suspend.suspend = ltr558_early_suspend;
 	ltr558->early_suspend.resume = ltr558_late_resume;
 	register_early_suspend(&ltr558->early_suspend);
+#endif /* !CONFIG_HAS_EARLYSUSPEND */
+
+	/* setup interrupt and wakeup */
+	device_init_wakeup(&client->dev, true);
+	/* Looks there will receive a fake interrupt after this request, careful */
+	/* keep this as the last statement in this function to avoid interrupt by interrupt */
+	ret = request_threaded_irq(ltr558->pdata->int_gpio, NULL, ltr558_interrupt, IRQ_TYPE_EDGE_FALLING,
+			SENSOR_NAME, (void *)client);
+	if (ret) {
+		pr_err("%s Could not allocate irq(%d) !\n", __func__, ltr558->pdata->int_gpio);
+		goto err_request_irq;
+	}
 
 	goto done;
 
 	/* error, unwind it all */
+err_request_irq:
+	device_init_wakeup(&client->dev, false);
+	destroy_workqueue(ltr558->wq);
+
+err_create_workqueue:
+	sysfs_remove_group(&ltr558->light_input_dev->dev.kobj,
+		&light_attribute_group);
+
 err_sysfs_create_group_light:
 	input_unregister_device(ltr558->light_input_dev);
+
 err_input_register_device_light:
 err_input_allocate_device_light:
-	destroy_workqueue(ltr558->wq);
-err_create_workqueue:
 	sysfs_remove_group(&ltr558->proximity_input_dev->dev.kobj,
-			   &proximity_attribute_group);
+		&proximity_attribute_group);
+
 err_sysfs_create_group_proximity:
 	input_unregister_device(ltr558->proximity_input_dev);
+
 err_input_register_device_proximity:
 	input_free_device(input_dev);
+
 err_input_allocate_device_proximity:
 	mutex_destroy(&ltr558->lock);
 	wake_lock_destroy(&ltr558->prx_wake_lock);
+
 err_hardware_init:
 	kfree(ltr558);
+
 done:
 	return ret;
 }
 
+static int ltr558_i2c_remove(struct i2c_client *client)
+{
+	struct ltr558_data *ltr558 = i2c_get_clientdata(client);
+
+	free_irq(ltr558->pdata->int_gpio, (void *)client);
+	device_init_wakeup(&client->dev, false);
+	sysfs_remove_group(&ltr558->light_input_dev->dev.kobj,
+			   &light_attribute_group);
+	input_unregister_device(ltr558->light_input_dev);
+	sysfs_remove_group(&ltr558->proximity_input_dev->dev.kobj,
+			   &proximity_attribute_group);
+	input_unregister_device(ltr558->proximity_input_dev);
+	if (ltr558->power_state) { /* May have unreleased resource if this variable is corrupted */
+		if (ltr558->power_state & PROXIMITY_ENABLED) {
+			cancel_work_sync(&ltr558->work_proximity);
+			ltr558_proximity_disable(ltr558);
+		}
+		if (ltr558->power_state & LIGHT_ENABLED) {
+			hrtimer_cancel(&ltr558->light_timer);
+			cancel_work_sync(&ltr558->work_light);
+			ltr558_light_disable(ltr558);
+		}
+		ltr558->power_state = 0;
+	}
+	destroy_workqueue(ltr558->wq);
+	mutex_destroy(&ltr558->lock);
+	wake_lock_destroy(&ltr558->prx_wake_lock);
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	unregister_early_suspend(&ltr558->early_suspend);
+#endif /* !CONFIG_HAS_EARLYSUSPEND */
+	kfree(ltr558);
+	return 0;
+}
+
 static void ltr558_early_suspend(struct early_suspend *h)
 {
-	int power_ps;
-	int power_als;
 	struct ltr558_data *ltr558 =
 	    container_of(h, struct ltr558_data, early_suspend);
 
-	ltr558_dbgmsg("early suspend\n");
-	power_ps = ltr558_i2c_read_reg(LTR558_PS_CONTR);
-	power_als = ltr558_i2c_read_reg(LTR558_ALS_CONTR);
-	if(power_ps & MODE_ACTIVE)
-		ltr558->power_state |= PROXIMITY_ENABLED;
-	if(power_als & MODE_ACTIVE)
-		ltr558->power_state |= LIGHT_ENABLED;
+	LTR558_DBGMSG("ltr558_early_suspend.\n");
 
 	if (ltr558->power_state & LIGHT_ENABLED)
 		ltr558_light_disable(ltr558);
 
-	if (ltr558->power_state & PROXIMITY_ENABLED)
-		ltr558_proximity_disable(ltr558);
-	ltr558->power_state &= ~PROXIMITY_ENABLED;
-	ltr558->power_state &= ~LIGHT_ENABLED;
+	if (ltr558->power_state & PROXIMITY_ENABLED) {
+		enable_irq_wake(ltr558->pdata->int_gpio);
+	}
 }
 
 static void ltr558_late_resume(struct early_suspend *h)
@@ -755,43 +782,14 @@ static void ltr558_late_resume(struct early_suspend *h)
 	struct ltr558_data *ltr558 =
 	    container_of(h, struct ltr558_data, early_suspend);
 
-	ltr558_dbgmsg("late resume\n");
+	LTR558_DBGMSG("ltr558_late_resume.\n");
 
-	if (ltr558->power_state & LIGHT_ENABLED)
-		ltr558_proximity_enable(ltr558);
-
-	if (ltr558->power_state & PROXIMITY_ENABLED);
-		ltr558_light_enable(ltr558);
-}
-
-static int ltr558_i2c_remove(struct i2c_client *client)
-{
-	struct ltr558_data *ltr558 = i2c_get_clientdata(client);
-	sysfs_remove_group(&ltr558->light_input_dev->dev.kobj,
-			   &light_attribute_group);
-	input_unregister_device(ltr558->light_input_dev);
-	sysfs_remove_group(&ltr558->proximity_input_dev->dev.kobj,
-			   &proximity_attribute_group);
-	input_unregister_device(ltr558->proximity_input_dev);
-	if (ltr558->power_state) {
-		if (ltr558->power_state & PROXIMITY_ENABLED) {
-			hrtimer_cancel(&ltr558->proximity_timer);
-			cancel_work_sync(&ltr558->work_proximity);
-			ltr558_proximity_disable(ltr558);
-		}
-		if (ltr558->power_state & LIGHT_ENABLED) {
-			hrtimer_cancel(&ltr558->proximity_timer);
-			cancel_work_sync(&ltr558->work_proximity);
-			ltr558_light_disable(ltr558);
-		}
-		ltr558->power_state = 0;
+	if (ltr558->power_state & PROXIMITY_ENABLED) {
+		disable_irq_wake(ltr558->pdata->int_gpio);
 	}
-	destroy_workqueue(ltr558->wq);
-	mutex_destroy(&ltr558->lock);
-	wake_lock_destroy(&ltr558->prx_wake_lock);
-	unregister_early_suspend(&ltr558->early_suspend);
-	kfree(ltr558);
-	return 0;
+	if (ltr558->power_state & LIGHT_ENABLED);
+		ltr558_light_enable(ltr558);
+
 }
 
 static const struct i2c_device_id ltr558_device_id[] = {

@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All Rights Reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -36,6 +36,15 @@
 #ifdef CONFIG_SENSORS_AK8975
 #include <linux/akm8975.h>
 #endif
+
+#ifdef CONFIG_INPUT_LTR558
+#include <linux/input/ltr5xx.h>
+
+#ifndef LTR558_IRQ_GPIO
+#define LTR558_IRQ_GPIO 17
+#endif
+
+#endif /* !CONFIG_INPUT_LTR558 */
 
 #ifdef CONFIG_AVAGO_APDS990X
 #ifndef APDS990X_IRQ_GPIO
@@ -279,13 +288,33 @@ static struct i2c_board_info isl29028_i2c_info[] __initdata = {
 #endif
 
 #ifdef CONFIG_INPUT_LTR558
+static struct ltr5xx_platform_data ltr558_pdata = {
+	.int_gpio = MSM_GPIO_TO_INT(LTR558_IRQ_GPIO),
+};
+
 /* LTR558 BUS ID 0x23 */
 static struct i2c_board_info ltr558_i2c_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("ltr558", 0x23),
+		.platform_data =  &ltr558_pdata
 	},
 };
-#endif
+
+static struct msm_gpio ltr558_gpio_cfg_data[] = {
+	{GPIO_CFG(LTR558_IRQ_GPIO, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_6MA), "ltr558_ALS_PS_int"},
+};
+
+static int ltr558_gpio_setup(void) {
+	int ret = 0;
+	ret = msm_gpios_request_enable(ltr558_gpio_cfg_data, 1);
+	if(ret < 0)
+		printk(KERN_ERR "%s: Failed to obtain acc int GPIO %d. Code: %d\n",
+				__func__, ltr558_pdata.int_gpio, ret);
+
+	return ret;
+}
+
+#endif /* !CONFIG_INPUT_LTR558 */
 
 #if defined(CONFIG_I2C) && defined(CONFIG_INPUT_LTR502)
 
@@ -458,6 +487,7 @@ void __init msm7627a_sensor_init(void)
 #ifdef CONFIG_INPUT_LTR558
 	if (machine_is_msm8625q_skue()) {
 		pr_info("i2c_register_board_info LTR558 ALP sensor!\n");
+		ltr558_gpio_setup();
 		i2c_register_board_info(MSM_GSBI1_QUP_I2C_BUS_ID,
 					ltr558_i2c_info,
 					ARRAY_SIZE(ltr558_i2c_info));
