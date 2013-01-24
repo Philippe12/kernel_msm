@@ -233,8 +233,15 @@ static struct camera_vreg_t ov5648_gpio_vreg_evbd[] = {
 	{"cam_ov5648_vdd", REG_GPIO, 0, 0, 0},
 };
 #endif
+
 #ifdef CONFIG_OV8825
 static struct camera_vreg_t ov8825_gpio_vreg[] = {
+	{"cam_ov8825_avdd", REG_GPIO, 0, 0, 0},
+	{"cam_ov8825_vdd", REG_GPIO, 0, 0, 0},
+};
+static struct camera_vreg_t ov8825_gpio_vreg_evbd[] = {
+	{"ldo12", REG_LDO, 2700000, 3300000, 0},
+	{"smps3", REG_LDO, 1800000, 1800000, 0},
 	{"cam_ov8825_avdd", REG_GPIO, 0, 0, 0},
 	{"cam_ov8825_vdd", REG_GPIO, 0, 0, 0},
 };
@@ -805,6 +812,7 @@ static struct msm_camera_sensor_info msm_camera_sensor_ar0542_data = {
   .actuator_info = &msm_act_main_cam_10_info,
 };
 #endif
+
 #ifdef CONFIG_MT9E013
 static struct msm_camera_sensor_flash_data flash_mt9e013 = {
 	.flash_type             = MSM_CAMERA_FLASH_LED,
@@ -1067,6 +1075,21 @@ static void __init msm7x27a_init_cam(void)
 		msm_flash_src_ov5648_truly_cm8352._fsrc.ext_driver_src.led_en = GPIO_SKUD_CAM_LED_EN;
 		msm_flash_src_ov5648_truly_cm8352._fsrc.ext_driver_src.led_flash_en = GPIO_SKUD_CAM_LED_FLASH_EN;
 #endif
+
+#ifdef CONFIG_OV8825
+		if(machine_is_msm8625q_evbd())
+        {
+			sensor_board_info_ov8825.cam_vreg = ov8825_gpio_vreg_evbd;
+			sensor_board_info_ov8825.num_vreg = ARRAY_SIZE(ov8825_gpio_vreg_evbd);
+			msm_act_main_cam_3_info.vcm_pwd = GPIO_SKUD_CAM_5MP_CAM_VCM_PWDN;
+			msm_act_main_cam_3_info.vcm_enable = 1;
+			msm_camera_sensor_ov8825_data.sensor_reset=GPIO_SKUD_CAM_5MP_CAMIF_RESET;
+			msm_camera_sensor_ov8825_data.sensor_pwd = GPIO_SKUD_CAM_5MP_SHDN_N;
+			msm_flash_src_ov8825._fsrc.ext_driver_src.led_en = GPIO_SKUD_CAM_LED_EN;
+			msm_flash_src_ov8825._fsrc.ext_driver_src.led_flash_en = GPIO_SKUD_CAM_LED_FLASH_EN;
+		}
+#endif
+
 #ifdef CONFIG_OV7695
 		if(machine_is_msm8625q_evbd()) {
 			sensor_board_info_ov7695.cam_vreg = ov7695_gpio_vreg_evbd;
@@ -1218,6 +1241,12 @@ static struct i2c_board_info i2c_camera_devices_sku5[] = {
 };
 
 static struct i2c_board_info i2c_camera_devices_skud[] = {
+#ifdef CONFIG_OV8825
+	{
+		I2C_BOARD_INFO("ov8825", 0x6C >> 3), // 8MP sensor
+		.platform_data = &msm_camera_sensor_ov8825_data,
+	},
+#endif
 #ifdef CONFIG_OV7695
 	{
 		I2C_BOARD_INFO("ov7695", 0x21 << 1),
