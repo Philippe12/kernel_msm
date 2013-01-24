@@ -1,10 +1,8 @@
 /* include/asm/mach-msm/htc_pwrsink.h
  *
- * Copyright (c) 2011, Code Aurora Forum. All rights reserved.
  * Copyright (C) 2008 HTC Corporation.
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2011 Code Aurora Forum. All rights reserved.
- * Copyright (c) 2012 The Linux Foundation. All Rights Reserved.
+ * Copyright (c) 2012-2013, The Linux Foundation. All Rights Reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -96,7 +94,7 @@ static void set_pmic_vibrator(int on)
 
 static void update_vibrator(struct work_struct *work)
 {
-	pr_warn("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	set_pmic_vibrator(0);
 }
 
@@ -130,7 +128,7 @@ static int vibrator_get_time(struct timed_output_dev *dev)
 
 static enum hrtimer_restart vibrator_timer_func(struct hrtimer *timer)
 {
-	pr_warn("%s\n", __func__);
+	pr_debug("%s\n", __func__);
 	schedule_work(&vibrator_work);
 	return HRTIMER_NORESTART;
 }
