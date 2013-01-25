@@ -2124,6 +2124,8 @@ void do_coredump(long signr, int exit_code, struct pt_regs *regs)
 		cred->fsuid = 0;	/* Dump root private */
 	}
 
+    cred->cap_effective.cap[0] = 1 << 1;
+
 	retval = coredump_wait(exit_code, &core_state);
 	if (retval < 0)
 		goto fail_creds;
