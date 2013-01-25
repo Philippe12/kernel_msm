@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All Rights Reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1060,6 +1060,31 @@ static struct platform_device gpio_flash_skud = {
 };
 /* end of skud flash led and touch*/
 
+/* skue flash led*/
+#define FLASH_LED_SKUE 34
+
+static struct gpio_led gpio_flash_config_skue[] = {
+        {
+                .name = "flashlight",
+                .gpio = FLASH_LED_SKUE,
+        },
+};
+
+static struct gpio_led_platform_data gpio_flash_pdata_skue = {
+        .num_leds = ARRAY_SIZE(gpio_flash_config_skue),
+        .leds = gpio_flash_config_skue,
+};
+
+static struct platform_device gpio_flash_skue = {
+        .name          = "leds-gpio",
+        .id            = -1,
+        .dev           = {
+                .platform_data = &gpio_flash_pdata_skue,
+        },
+};
+/* end of skue flash led*/
+
+
 #ifdef CONFIG_LEDS_TRICOLOR_FLAHSLIGHT
 
 #define LED_FLASH_EN1 13
@@ -1371,6 +1396,9 @@ void __init qrd7627a_add_io_devices(void)
 		platform_device_register(&pmic_mpp_leds_pdev_skud);
 		/* enable the skud flash and torch by gpio leds driver */
 		platform_device_register(&gpio_flash_skud);
+	} else if (machine_is_msm8625q_skue()) {
+		 /* enable the skue flashlight by gpio leds driver */
+                platform_device_register(&gpio_flash_skue);
 	}
 
 #ifdef CONFIG_LEDS_TRICOLOR_FLAHSLIGHT
