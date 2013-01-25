@@ -787,9 +787,9 @@ static void ltr558_late_resume(struct early_suspend *h)
 	if (ltr558->power_state & PROXIMITY_ENABLED) {
 		disable_irq_wake(ltr558->pdata->int_gpio);
 	}
-	if (ltr558->power_state & LIGHT_ENABLED);
+	if (ltr558->power_state & LIGHT_ENABLED){
 		ltr558_light_enable(ltr558);
-
+	}
 }
 
 static const struct i2c_device_id ltr558_device_id[] = {
