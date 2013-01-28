@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, The Linux Foundation. All Rights Reserved.
+/* Copyright (c) 2011-2013, The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -281,6 +281,7 @@ static struct mmc_platform_data sdc1_plat_data = {
 	.msmsdcc_fmax   = 49152000,
 	.status      = msm7627a_sdcc_slot_status,
 	.irq_flags   = IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+	.hw_resetable	= 1,
 };
 #endif
 

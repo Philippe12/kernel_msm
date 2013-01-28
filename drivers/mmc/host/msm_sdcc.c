@@ -4008,7 +4008,7 @@ static void msmsdcc_hw_reset(struct mmc_host *mmc)
 	pr_warn("%s: issue a hw reset now\n",
 					mmc_hostname(host->mmc));
 	/* Write-protection bits would be lost on a hardware reset in emmc */
-	if (!card || !mmc_card_sd(card))
+	if (!card || mmc_card_sdio(card))
 		return;
 
 	if (host->plat->translate_vdd && !host->sdio_gpio_lpm && !host->plat->vreg_data) {
@@ -5379,7 +5379,8 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc->caps |= plat->mmc_bus_width;
 	mmc->caps |= MMC_CAP_MMC_HIGHSPEED | MMC_CAP_SD_HIGHSPEED;
 	mmc->caps |= MMC_CAP_WAIT_WHILE_BUSY | MMC_CAP_ERASE;
-	mmc->caps |= MMC_CAP_HW_RESET;
+	if (plat->hw_resetable)
+		mmc->caps |= MMC_CAP_HW_RESET;
 	/*
 	 * If we send the CMD23 before multi block write/read command
 	 * then we need not to send CMD12 at the end of the transfer.
