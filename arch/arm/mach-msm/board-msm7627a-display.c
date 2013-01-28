@@ -856,7 +856,7 @@ void __init msm_msm7627a_allocate_memory_regions(void)
 	else if (machine_is_msm7627a_evb() || machine_is_msm8625_evb()
                         || machine_is_msm8625_qrd5() || machine_is_msm7x27a_qrd5a()
                         || machine_is_msm8625q_skud() || machine_is_msm8625q_skue()
-                        || machine_is_msm8625q_evbd())
+                        )
 		fb_size = MSM8x25_MSM_FB_SIZE;
 	else if (machine_is_msm8625q_evbd() || machine_is_msm8625q_skud())
 		fb_size = MSM8x25Q_MSM_FB_SIZE;
@@ -1126,7 +1126,7 @@ static int msm_fb_dsi_client_reset(void)
 	else if (machine_is_msm7627a_evb() || machine_is_msm8625_evb()
                         || machine_is_msm8625_qrd5() || machine_is_msm7x27a_qrd5a())
 		rc = msm_fb_dsi_client_qrd3_reset();
-        else if (machine_is_msm8625q_skud())
+        else if (machine_is_msm8625q_skud() || machine_is_msm8625q_evbd())
                 rc = msm_fb_dsi_client_skud_reset();
         else if (machine_is_msm8625q_skue())
                 rc = msm_fb_dsi_client_skue_reset();
