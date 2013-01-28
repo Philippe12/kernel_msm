@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+ *  Copyright (c) 2012-2013, The Linux Foundation. All Rights Reserved.
  *  Copyright (C) 2011, Bosch Sensortec GmbH All Rights Reserved
  *
  * This program is free software; you can redistribute it and/or modify
@@ -44,7 +44,8 @@
 #define SLOPE_Z_INDEX 			7
 #define BMA250_MAX_DELAY		200
 #define BMA250_CHIP_ID			3
-#define BMA250E_CHIP_ID			0xF9
+#define BMA250E_CHIP_ID1			0xF8
+#define BMA250E_CHIP_ID2			0xF9
 #define BMA250_RANGE_SET		0
 #define BMA250_BW_SET			4
 
@@ -807,9 +808,9 @@ static int bma250_probe(struct i2c_client *client,
 	}
 	/* read chip id */
 	tempvalue = 0;
-	tempvalue = i2c_smbus_read_word_data(client, BMA250_CHIP_ID_REG);
+	tempvalue = i2c_smbus_read_word_data(client, BMA250_CHIP_ID_REG) & 0x00FF;
 	/* SKUD board is using BMA250E chip! */
-	if ((tempvalue & 0x00FF) == BMA250E_CHIP_ID) {
+	if (tempvalue == BMA250E_CHIP_ID1 || tempvalue == BMA250E_CHIP_ID2) {
 		printk(KERN_INFO "Bosch Sensortec Device detected!\n"
 		       "BMA250 registered I2C driver!\n");
 	} else {
