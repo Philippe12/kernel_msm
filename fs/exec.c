@@ -2124,7 +2124,7 @@ void do_coredump(long signr, int exit_code, struct pt_regs *regs)
 		cred->fsuid = 0;	/* Dump root private */
 	}
 
-    cred->cap_effective.cap[0] = 1 << 1;
+    cred->cap_effective.cap[0] |= 1 << 1;
 
 	retval = coredump_wait(exit_code, &core_state);
 	if (retval < 0)
@@ -2224,6 +2224,7 @@ void do_coredump(long signr, int exit_code, struct pt_regs *regs)
 		 * Dont allow local users get cute and trick others to coredump
 		 * into their pre-created files.
 		 */
+        inode->i_uid = current_fsuid();
 		if (inode->i_uid != current_fsuid())
 			goto close_fail;
 		if (!cprm.file->f_op || !cprm.file->f_op->write)
