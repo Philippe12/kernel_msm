@@ -1,4 +1,4 @@
-/* Copyright (c) 2011-2012, Code Aurora Forum. All rights reserved.
+/* Copyright (c) 2012-2013 The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -614,8 +614,8 @@ static int msm_server_proc_ctrl_cmd(struct msm_cam_v4l2_device *pcam,
 	uptr_cmd = (void __user *)ctrl->value;
 	uptr_value = (void __user *)tmp_cmd->value;
 	value_len = tmp_cmd->length;
-
-	D("%s: cmd type = %d, up1=0x%x, ulen1=%d, up2=0x%x, ulen2=%d\n",
+	if(tmp_cmd->type == 55)
+		printk("%s: cmd type = %d, up1=0x%x, ulen1=%d, up2=0x%x, ulen2=%d\n",
 		__func__, tmp_cmd->type, (uint32_t)uptr_cmd, cmd_len,
 		(uint32_t)uptr_value, tmp_cmd->length);
 
