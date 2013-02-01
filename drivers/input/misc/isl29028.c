@@ -1,5 +1,5 @@
 /* 
- * Copyright (c) 2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013, The Linux Foundation. All rights reserved.
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -93,7 +93,7 @@
 #define CURRENT_100MA (100 <<8)
 #define CURRENT_200MA (200 <<8)
 #define PROXIMITY_MAX 140
-#define THRESHOLD	180    //PROXIMITY_MAX+40
+#define THRESHOLD	50
 #define STEP		15
 #define ADJ_DBG
 #define NUM  5
