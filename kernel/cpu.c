@@ -47,6 +47,9 @@ static int cpu_hotplug_disabled;
 
 #ifdef CONFIG_HOTPLUG_CPU
 
+static int cpu_up_stat = 0;
+static DEFINE_MUTEX(cpu_up_lock);
+
 static struct {
 	struct task_struct *active_writer;
 	struct mutex lock; /* Synchronizes accesses to refcount, */
@@ -276,6 +279,10 @@ int __ref cpu_down(unsigned int cpu)
 {
 	int err;
 
+	mutex_lock(&cpu_up_lock);
+	cpu_up_stat = 0;
+	mutex_unlock(&cpu_up_lock);
+
 	cpu_maps_update_begin();
 
 	if (cpu_hotplug_disabled) {
@@ -380,6 +387,13 @@ int __cpuinit cpu_up(unsigned int cpu)
 	err = _cpu_up(cpu, 0);
 	trace_cpu_online(1);
 
+	mutex_lock(&cpu_up_lock);
+	cpu_up_stat++;
+	if (cpu_up_stat == 3) {
+		cpu_up_stat = 0;
+		smp_send_all_cpu_ping();
+	}
+	mutex_unlock(&cpu_up_lock);
 out:
 	cpu_maps_update_done();
 	return err;
