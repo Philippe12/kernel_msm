@@ -73,6 +73,8 @@
 #define MODE_ALS_ON_Range1	0x0b
 #define MODE_ALS_ON_Range2	0x03
 #define MODE_ALS_StdBy		0x00
+#define MODE_ALS_ON_FLAG	0x02
+
 
 #define MODE_PS_ON_Gain1	0x03
 #define MODE_PS_ON_Gain4	0x07
@@ -110,7 +112,7 @@ enum {
 /* driver data */
 struct ltr558_data {
 	bool on;
-	u8 power_state;
+	u8 power_state;		/* sensor power control state */
 	struct ltr5xx_platform_data *pdata;
 	struct i2c_client 		*i2c_client;
 	struct mutex 			lock;
@@ -276,6 +278,7 @@ static ssize_t light_enable_store(struct device *dev,
 static int ltr558_proximity_enable(struct ltr558_data *ltr558)
 {
 	int setgain;
+	int read_val;
 	char buf[4] = {0};
 
 	LTR558_DBGMSG("ltr558_proximity_enable\n");
@@ -311,6 +314,17 @@ static int ltr558_proximity_enable(struct ltr558_data *ltr558)
 	if(ltr558_i2c_write_reg(LTR558_PS_CONTR, setgain)){
 		pr_err("%s: write PS control error .\n", __func__);
 	}
+	/* enable ALS sensor to ensure PS working proprely */
+	read_val = ltr558_i2c_read_reg(LTR558_ALS_CONTR);
+	if(read_val < 0 ){
+		pr_err("%s: read PS control error .\n", __func__);
+	}
+	else if(!(read_val & MODE_ALS_ON_FLAG)){
+		if(ltr558_i2c_write_reg(LTR558_ALS_CONTR, (read_val | MODE_ALS_ON_FLAG))){
+			pr_err("%s: turn on  ALS control error .\n", __func__);
+		}
+	}
+
 	msleep(WAKEUP_DELAY);
 
 	LTR558_DBGMSG("WAKEUP_DELAY 10ms after write cmd register.\n");
@@ -320,6 +334,14 @@ static int ltr558_proximity_enable(struct ltr558_data *ltr558)
 static int ltr558_proximity_disable(struct ltr558_data *ltr558)
 {
 	int err;
+
+	if(!(ltr558->power_state & LIGHT_ENABLED)){
+		/* turn off ALS if light is not enable by uplayer*/
+		if(ltr558_i2c_write_reg(LTR558_ALS_CONTR, MODE_ALS_StdBy)){
+			pr_err("%s: turn off ALS control error .\n", __func__);
+		}
+	}
+
 	err = ltr558_i2c_write_reg(LTR558_PS_CONTR, MODE_PS_StdBy);
 	if(err){
 		pr_err("%s: write PS interrupt control error %d.\n", __func__, err);
