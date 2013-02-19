@@ -3,7 +3,7 @@
  * Chip is combined proximity and ambient light sensor.
  *
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
- * Copyright (c) 2012, Code Aurora Forum. All rights reserved.
+ * Copyright (c) 2012, The Linux Foundation. All rights reserved.
  *
  * Contact: Samu Onkalo <samu.p.onkalo@nokia.com>
  *
