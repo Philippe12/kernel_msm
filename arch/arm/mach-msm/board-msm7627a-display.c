@@ -772,6 +772,19 @@ static struct platform_device mipi_dsi_hx8389b_panel_device = {
 	}
 };
 
+static struct msm_panel_common_pdata mipi_hx8392a_pdata = {
+	.backlight = evb_backlight_control,
+	.rotate_panel = NULL,
+};
+
+static struct platform_device mipi_dsi_hx8392a_panel_device = {
+	.name   = "mipi_hx8392a",
+	.id     = 0,
+	.dev    = {
+		.platform_data = &mipi_hx8392a_pdata,
+	}
+};
+
 static struct msm_panel_common_pdata mipi_otm9605a_pdata = {
 	.backlight    = skue_backlight_control,
 	.rotate_panel = NULL,
@@ -839,6 +852,7 @@ static struct platform_device *skud_fb_devices[] __initdata = {
 	&msm_fb_device,
 	&mipi_dsi_hx8389b_panel_device,
 	&mipi_dsi_NT35590_panel_device,
+	&mipi_dsi_hx8392a_panel_device,
 };
 
 static struct platform_device *skue_fb_devices[] __initdata = {
@@ -855,7 +869,7 @@ void __init msm_msm7627a_allocate_memory_regions(void)
 		fb_size = MSM7x25A_MSM_FB_SIZE;
 	else if (machine_is_msm7627a_evb() || machine_is_msm8625_evb()
                         || machine_is_msm8625_qrd5() || machine_is_msm7x27a_qrd5a()
-                        || machine_is_msm8625q_skud() || machine_is_msm8625q_skue()
+                        || machine_is_msm8625q_skue()
                         )
 		fb_size = MSM8x25_MSM_FB_SIZE;
 	else if (machine_is_msm8625q_evbd() || machine_is_msm8625q_skud())
@@ -1716,7 +1730,6 @@ void msm7x27a_set_display_params(char *prim_panel)
 void __init msm_fb_add_devices(void)
 {
 	int rc = 0;
-
         msm7x27a_set_display_params(prim_panel_name);
 
 	if (machine_is_msm7627a_qrd1())
@@ -1741,9 +1754,14 @@ void __init msm_fb_add_devices(void)
 			mdp_pdata.cont_splash_enabled = 0x0;
 
                 /* SKUD and SKUD' use different lane connection */
-                if (cpu_is_msm8625q())
-                        mipi_dsi_pdata.dlane_swap = 0;
+                if (cpu_is_msm8625q()){
+					if(!strncmp((char *)prim_panel_name, "mipi_video_hx8392a_720p", 23))
+						mipi_dsi_pdata.dlane_swap = 3;
+					else
+						mipi_dsi_pdata.dlane_swap = 0;
 
+					pr_info("[DISP] The prim panel name is %s, Swap lane is %d\n", prim_panel_name,mipi_dsi_pdata.dlane_swap);
+				}
                 platform_add_devices(skud_fb_devices,
 				ARRAY_SIZE(skud_fb_devices));
         } else if (machine_is_msm8625q_skue()) {
