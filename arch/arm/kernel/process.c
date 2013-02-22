@@ -252,6 +252,10 @@ void cpu_idle(void)
 		tick_nohz_idle_enter();
 		rcu_idle_enter();
 		while (!need_resched()) {
+#ifdef CONFIG_HOTPLUG_CPU
+			if (cpu_is_offline(smp_processor_id()))
+				cpu_die();
+#endif
 
 			/*
 			 * We need to disable interrupts here
@@ -281,13 +285,6 @@ void cpu_idle(void)
 		tick_nohz_idle_exit();
 		idle_notifier_call_chain(IDLE_END);
 		schedule_preempt_disabled();
-    /* It must be guaranteed the CPU is not at NOHZ mode before remove
-     * in order to get the accurate time for proc/stat
-     */
-#ifdef CONFIG_HOTPLUG_CPU
-        if (cpu_is_offline(smp_processor_id()))
-            cpu_die();
-#endif
 	}
 }
 
