@@ -2143,7 +2143,7 @@ int32_t ov5648_truly_cm8352_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 			pip_ctl.sensor_i2c_client = s_ctrl->sensor_i2c_client;
 			pip_ctl.write_ctl = res;
 			pip_ov7695_ctrl(PIP_CRL_WRITE_SETTINGS, &pip_ctl);
-			msleep(50);
+			msleep(60);
 			msm_sensor_write_conf_array(
 				s_ctrl->sensor_i2c_client,
 				s_ctrl->msm_sensor_reg->mode_settings, res);
