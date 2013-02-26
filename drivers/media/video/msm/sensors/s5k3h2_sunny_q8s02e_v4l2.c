@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All Rights Reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -1051,49 +1051,49 @@ void s5k3h2_sunny_q8s02e_update_awb_otp_data(struct msm_sensor_ctrl_t *s_ctrl,
         , &R_target, &B_target,/* out of outside range */
         R_offset_outside, B_offset_outside);
     }
-  }
 
-  /* 0x100 = 1x gain */
-  if (AWB_B_Gr_Ratio < B_target) {
-    if (AWB_R_Gr_Ratio < R_target) {
-      G_gain = 0x100;
-      B_gain = 0x100 *
-        B_target /
-        AWB_B_Gr_Ratio;
-      R_gain = 0x100 *
-        R_target /
-        AWB_R_Gr_Ratio;
-    } else {
-      R_gain = 0x100;
-      G_gain = 0x100 *
-        AWB_R_Gr_Ratio /
-        R_target;
-      B_gain = 0x100 * AWB_R_Gr_Ratio * B_target
-        / (AWB_B_Gr_Ratio * R_target);
-    }
-  } else {
-    if (AWB_R_Gr_Ratio < R_target) {
-      B_gain = 0x100;
-      G_gain = 0x100 *
-        AWB_B_Gr_Ratio /
-        B_target;
-      R_gain = 0x100 * AWB_B_Gr_Ratio * R_target
-        / (AWB_R_Gr_Ratio * B_target);
-    } else {
-      if (B_target * AWB_R_Gr_Ratio < R_target * AWB_B_Gr_Ratio) {
-        B_gain = 0x100;
-        G_gain = 0x100 *
-          AWB_B_Gr_Ratio /
-          B_target;
-        R_gain = 0x100 * AWB_B_Gr_Ratio * R_target
-        / (AWB_R_Gr_Ratio * B_target);
+    /* 0x100 = 1x gain */
+    if (AWB_B_Gr_Ratio < B_target) {
+      if (AWB_R_Gr_Ratio < R_target) {
+        G_gain = 0x100;
+        B_gain = 0x100 *
+          B_target /
+          AWB_B_Gr_Ratio;
+        R_gain = 0x100 *
+          R_target /
+          AWB_R_Gr_Ratio;
       } else {
         R_gain = 0x100;
         G_gain = 0x100 *
           AWB_R_Gr_Ratio /
           R_target;
         B_gain = 0x100 * AWB_R_Gr_Ratio * B_target
-        / (AWB_B_Gr_Ratio * R_target);
+          / (AWB_B_Gr_Ratio * R_target);
+      }
+    } else {
+      if (AWB_R_Gr_Ratio < R_target) {
+        B_gain = 0x100;
+        G_gain = 0x100 *
+          AWB_B_Gr_Ratio /
+          B_target;
+        R_gain = 0x100 * AWB_B_Gr_Ratio * R_target
+          / (AWB_R_Gr_Ratio * B_target);
+      } else {
+        if (B_target * AWB_R_Gr_Ratio < R_target * AWB_B_Gr_Ratio) {
+          B_gain = 0x100;
+          G_gain = 0x100 *
+            AWB_B_Gr_Ratio /
+            B_target;
+          R_gain = 0x100 * AWB_B_Gr_Ratio * R_target
+          / (AWB_R_Gr_Ratio * B_target);
+        } else {
+          R_gain = 0x100;
+          G_gain = 0x100 *
+            AWB_R_Gr_Ratio /
+            R_target;
+          B_gain = 0x100 * AWB_R_Gr_Ratio * B_target
+          / (AWB_B_Gr_Ratio * R_target);
+        }
       }
     }
   }
