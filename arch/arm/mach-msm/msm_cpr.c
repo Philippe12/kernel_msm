@@ -967,6 +967,7 @@ static int __devinit msm_cpr_probe(struct platform_device *pdev)
 	uint32_t fuse_len = strlen(msm_fuse_info); 
 	char *s = msm_fuse_info + fuse_len;
 #endif
+	uint32_t curr_volt, new_volt;
 
 	if (!enable)
 		return -EPERM;
@@ -1074,6 +1075,46 @@ static int __devinit msm_cpr_probe(struct platform_device *pdev)
 	if(fuse_len < FUSE_INFO_LEN)
 		strcat(s, tmp_buf);
 #endif
+	/*
+	 * Calculate the step size by adding 1mV to the current voltage.
+	 * This moves the voltage by one regulator step. Diff between original
+	 * and current voltage to get the real regulator step.
+	 */
+	if (cpr->vreg_cx == ext_vreg_handle) {
+		curr_volt = regulator_get_voltage(cpr->vreg_cx);
+		if (curr_volt < 0) {
+			pr_err("CPR: get voltage failed\n");
+			goto err_reg_get;
+		}
+
+		res = regulator_set_voltage(cpr->vreg_cx, curr_volt+1,
+								curr_volt+1);
+		if (res) {
+			pr_err("CPR: Unable to calculate voltage step_size\n");
+			goto err_reg_get;
+		}
+		new_volt = regulator_get_voltage(cpr->vreg_cx);
+		if (new_volt < 0) {
+			pr_err("CPR: get voltage failed\n");
+			goto err_reg_get;
+		}
+
+		if ((new_volt - curr_volt) > 0)
+			cpr->step_size = (new_volt - curr_volt);
+
+		pdata->cpr_mode_data->step_div
+			= DIV_ROUND_CLOSEST(pdata->step_size, cpr->step_size);
+
+		pdata->dn_threshold
+			= DIV_ROUND_UP((pdata->step_size
+					* (pdata->dn_threshold - 1)),
+					cpr->step_size) + 1;
+
+		pr_info("CPR: step_size: %d, step_div: %d, dn_threshold: %d\n",
+				cpr->step_size,
+				pdata->cpr_mode_data->step_div,
+				pdata->dn_threshold);
+	}
 
 	/* Initial configuration of CPR */
 	res = cpr_config(cpr);
