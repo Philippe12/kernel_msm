@@ -21,6 +21,7 @@
 #include <mach/irqs-8625.h>
 #include <mach/socinfo.h>
 #include <asm/unwind.h>
+#include <mach/fiq.h>
 
 #include "msm_watchdog.h"
 
@@ -28,6 +29,7 @@
 
 struct msm_watchdog_dump msm_dump_cpu_ctx;
 static int fiq_counter;
+static int msm_fiq_no;
 void *msm7k_fiq_stack;
 
 /* Called from the FIQ asm handler */
@@ -36,30 +38,39 @@ void msm7k_fiq_handler(void)
 	struct irq_data *d;
 	struct irq_chip *c;
 	struct pt_regs context_regs;
+	struct pt_regs ctx_regs;
+	unsigned long flags;
 
 	pr_info("Fiq is received %s\n", __func__);
 	fiq_counter++;
-	d = irq_get_irq_data(MSM8625_INT_A9_M2A_2);
+
+	local_irq_save(flags);
+	d = irq_get_irq_data(msm_fiq_no);
 	c = irq_data_get_irq_chip(d);
 	c->irq_mask(d);
-	local_irq_disable();
 
-	/* Clear the IRQ from the ENABLE_SET */
-	gic_clear_irq_pending(MSM8625_INT_A9_M2A_2);
-	local_irq_enable();
-	flush_cache_all();
-	outer_flush_all();
- pr_err("%s msm_dump_cpu_ctx usr_r0:0x%x", __func__, msm_dump_cpu_ctx.usr_r0);
+	if (cpu_is_msm8625() || cpu_is_msm8625q())
+		/* Clear the IRQ from the ENABLE_SET */
+		gic_clear_irq_pending(msm_fiq_no);
+	else
+		/* Clear the IRQ from the VIC_INT_CLEAR0*/
+		c->irq_ack(d);
+
+	pr_err("%s msm_dump_cpu_ctx usr_r0:0x%x", __func__, msm_dump_cpu_ctx.usr_r0);
+	ctx_regs.ARM_pc = msm_dump_cpu_ctx.fiq_r14;
 	pr_err("%s msm_dump_cpu_ctx usr_r0:0x%x usr_r1:0x%x usr_r2:0x%x usr_r3:0x%x usr_r4:0x%x usr_r5:0x%x usr_r6:0x%x usr_r7:0x%x usr_r8:0x%x usr_r9:0x%x usr_r10:0x%x usr_r11:0x%x usr_r12:0x%x usr_r13:0x%x usr_r14:0x%x irq_spsr:0x%x irq_r13:0x%x irq_r14:0x%x svc_spsr:0x%x svc_r13:0x%x svc_r14:0x%x abt_spsr:0x%x abt_r13:0x%x abt_r14:0x%x und_spsr:0x%x und_r13:0x%x und_r14:0x%x fiq_spsr:0x%x fiq_r8:0x%x fiq_r9:0x%x fiq_r10:0x%x fiq_r11:0x%x fiq_r12:0x%x fiq_r13:0x%x fiq_r14:0x%x\n",__func__, msm_dump_cpu_ctx.usr_r0,msm_dump_cpu_ctx.usr_r1,msm_dump_cpu_ctx.usr_r2,msm_dump_cpu_ctx.usr_r3, msm_dump_cpu_ctx.usr_r4, msm_dump_cpu_ctx.usr_r5, msm_dump_cpu_ctx.usr_r6, msm_dump_cpu_ctx.usr_r7, msm_dump_cpu_ctx.usr_r8, msm_dump_cpu_ctx.usr_r9, msm_dump_cpu_ctx.usr_r10, msm_dump_cpu_ctx.usr_r11, msm_dump_cpu_ctx.usr_r12, msm_dump_cpu_ctx.usr_r13, msm_dump_cpu_ctx.usr_r14, msm_dump_cpu_ctx.irq_spsr, msm_dump_cpu_ctx.irq_r13, msm_dump_cpu_ctx.irq_r14, msm_dump_cpu_ctx.svc_spsr, msm_dump_cpu_ctx.svc_r13, msm_dump_cpu_ctx.svc_r14, msm_dump_cpu_ctx.abt_spsr,msm_dump_cpu_ctx.abt_r13, msm_dump_cpu_ctx.abt_r14, msm_dump_cpu_ctx.und_spsr,msm_dump_cpu_ctx.und_r13, msm_dump_cpu_ctx.und_r14, msm_dump_cpu_ctx.fiq_spsr,msm_dump_cpu_ctx.fiq_r8, msm_dump_cpu_ctx.fiq_r9, msm_dump_cpu_ctx.fiq_r10, msm_dump_cpu_ctx.fiq_r11, msm_dump_cpu_ctx.fiq_r12, msm_dump_cpu_ctx.fiq_r13, msm_dump_cpu_ctx.fiq_r14);
-	context_regs.ARM_sp = msm_dump_cpu_ctx.svc_r13;
-	context_regs.ARM_lr = msm_dump_cpu_ctx.svc_r14;
-	context_regs.ARM_fp = msm_dump_cpu_ctx.usr_r11; //for the svc r11 is the same with usr r11
-	context_regs.ARM_pc = msm_dump_cpu_ctx.svc_r14;
-	//dump_stack();
-	unwind_backtrace(&context_regs, current);
+	ctx_regs.ARM_lr = msm_dump_cpu_ctx.svc_r14;
+	ctx_regs.ARM_sp = msm_dump_cpu_ctx.svc_r13;
+	ctx_regs.ARM_fp = msm_dump_cpu_ctx.usr_r11;
+	unwind_backtrace(&ctx_regs, current);
+	arch_trigger_all_cpu_backtrace();
+	local_irq_restore(flags);
+
 #ifdef CONFIG_SMP
 	trigger_all_cpu_backtrace();
 #endif
+	flush_cache_all();
+	outer_flush_all();
 
 	return;
 }
@@ -81,20 +92,26 @@ static int __init msm_setup_fiq_handler(void)
 		return -ENOMEM;
 	}
 
-	fiq_set_type(MSM8625_INT_A9_M2A_2, IRQF_TRIGGER_RISING);
-	gic_set_irq_secure(MSM8625_INT_A9_M2A_2);
-	enable_irq(MSM8625_INT_A9_M2A_2);
-	pr_info("%s : msm7k fiq setup--done\n", __func__);
+	fiq_set_type(msm_fiq_no, IRQF_TRIGGER_RISING);
+	if (cpu_is_msm8625() || cpu_is_msm8625q())
+		gic_set_irq_secure(msm_fiq_no);
+	else
+		msm_fiq_select(msm_fiq_no);
+
+	enable_irq(msm_fiq_no);
+	pr_info("%s : MSM FIQ handler setup--done\n", __func__);
 	return ret;
 }
 
 static int __init init7k_fiq(void)
 {
-	if (!cpu_is_msm8625() && !cpu_is_msm8625q())
-		return 0;
+	if (cpu_is_msm8625() || cpu_is_msm8625q())
+		msm_fiq_no = MSM8625_INT_A9_M2A_2;
+	else
+		msm_fiq_no = INT_A9_M2A_2;
 
 	if (msm_setup_fiq_handler())
-		pr_err("MSM7K FIQ INIT FAILED\n");
+		pr_err("MSM FIQ INIT FAILED\n");
 
 	return 0;
 }
