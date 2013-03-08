@@ -451,13 +451,6 @@ static int __devinit fan53555_regulator_probe(struct i2c_client *client,
 	dump_registers(di, FAN53555_ID2, __func__);
 	dump_registers(di, FAN53555_MONITOR, __func__);
 
-	dump_registers(di, FAN53555_VSEL0, __func__);
-	dump_registers(di, FAN53555_VSEL1, __func__);
-	dump_registers(di, FAN53555_CONTROL, __func__);
-	dump_registers(di, FAN53555_ID1, __func__);
-	dump_registers(di, FAN53555_ID2, __func__);
-	dump_registers(di, FAN53555_MONITOR, __func__);
-
 	return ret;
 
 }
