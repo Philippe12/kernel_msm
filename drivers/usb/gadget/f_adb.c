@@ -196,8 +196,11 @@ static void adb_complete_in(struct usb_ep *ep, struct usb_request *req)
 {
 	struct adb_dev *dev = _adb_dev;
 
-	if (req->status != 0)
+	if (req->status != 0) {
+		printk("error in %s, req->status = 0x%08x\n",
+			__func__, req->status);
 		atomic_set(&dev->error, 1);
+	}
 
 	adb_req_put(dev, &dev->tx_idle, req);
 
@@ -209,8 +212,11 @@ static void adb_complete_out(struct usb_ep *ep, struct usb_request *req)
 	struct adb_dev *dev = _adb_dev;
 
 	dev->rx_done = 1;
-	if (req->status != 0 && req->status != -ECONNRESET)
+	if (req->status != 0 && req->status != -ECONNRESET) {
+		printk("error in %s, req->status = 0x%08x\n",
+			__func__, req->status);
 		atomic_set(&dev->error, 1);
+	}
 
 	wake_up(&dev->read_wq);
 }
@@ -275,15 +281,18 @@ static ssize_t adb_read(struct file *fp, char __user *buf,
 	int ret;
 
 	pr_debug("adb_read(%d)\n", count);
-	if (!_adb_dev)
+	if (!_adb_dev) {
+		printk("adb device is not setup\n");
 		return -ENODEV;
+	}
 
 	if (count > ADB_BULK_BUFFER_SIZE)
 		return -EINVAL;
 
-	if (adb_lock(&dev->read_excl))
+	if (adb_lock(&dev->read_excl)) {
+		printk("adb device is read busy\n");
 		return -EBUSY;
-
+	}
 	/* we will block until we're online */
 	while (!(atomic_read(&dev->online) || atomic_read(&dev->error))) {
 		pr_debug("adb_read: waiting for online state\n");
@@ -309,6 +318,7 @@ requeue_req:
 	if (ret < 0) {
 		pr_debug("adb_read: failed to queue req %p (%d)\n", req, ret);
 		r = -EIO;
+		printk("adb_read: failed to queue req %p (%d)\n", req, ret);
 		atomic_set(&dev->error, 1);
 		goto done;
 	} else {
@@ -318,8 +328,10 @@ requeue_req:
 	/* wait for a request to complete */
 	ret = wait_event_interruptible(dev->read_wq, dev->rx_done);
 	if (ret < 0) {
-		if (ret != -ERESTARTSYS)
-		atomic_set(&dev->error, 1);
+		if (ret != -ERESTARTSYS) {
+			atomic_set(&dev->error, 1);
+			printk("adb_read: failed to wait_event_int\n");
+		}
 		r = ret;
 		usb_ep_dequeue(dev->ep_out, req);
 		goto done;
@@ -390,6 +402,7 @@ static ssize_t adb_write(struct file *fp, const char __user *buf,
 			ret = usb_ep_queue(dev->ep_in, req, GFP_ATOMIC);
 			if (ret < 0) {
 				pr_debug("adb_write: xfer error %d\n", ret);
+				printk("adb_write: xfer error %d\n", ret);
 				atomic_set(&dev->error, 1);
 				r = -EIO;
 				break;
@@ -518,6 +531,7 @@ adb_function_unbind(struct usb_configuration *c, struct usb_function *f)
 
 
 	atomic_set(&dev->online, 0);
+	printk("entering in %s\n", __func__);
 	atomic_set(&dev->error, 1);
 
 	wake_up(&dev->read_wq);
@@ -578,6 +592,7 @@ static void adb_function_disable(struct usb_function *f)
 	struct usb_composite_dev	*cdev = dev->cdev;
 
 	DBG(cdev, "adb_function_disable cdev %p\n", cdev);
+	printk("adb_function_disable cdev %p\n", cdev);
 	/*
 	 * Bus reset happened or cable disconnected.  No
 	 * need to disable the configuration now.  We will
