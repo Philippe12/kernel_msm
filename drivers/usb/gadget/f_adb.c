@@ -286,8 +286,10 @@ static ssize_t adb_read(struct file *fp, char __user *buf,
 		return -ENODEV;
 	}
 
-	if (count > ADB_BULK_BUFFER_SIZE)
+	if (count > ADB_BULK_BUFFER_SIZE) {
+		printk("adb error: the read count %d is too large\n", count);
 		return -EINVAL;
+	}
 
 	if (adb_lock(&dev->read_excl)) {
 		printk("adb device is read busy\n");
@@ -301,10 +303,12 @@ static ssize_t adb_read(struct file *fp, char __user *buf,
 			atomic_read(&dev->error)));
 		if (ret < 0) {
 			adb_unlock(&dev->read_excl);
+			printk("adb_read: while loop error: ret = %d\n", ret);
 			return ret;
 		}
 	}
 	if (atomic_read(&dev->error)) {
+		printk("adb read -EIO due to dev->error 1\n");
 		r = -EIO;
 		goto done;
 	}
@@ -333,6 +337,7 @@ requeue_req:
 			printk("adb_read: failed to wait_event_int\n");
 		}
 		r = ret;
+		printk("adb_read: interruptiable return ret = %d\n", ret);
 		usb_ep_dequeue(dev->ep_out, req);
 		goto done;
 	}
@@ -343,11 +348,14 @@ requeue_req:
 
 		pr_debug("rx %p %d\n", req, req->actual);
 		xfer = (req->actual < count) ? req->actual : count;
-		if (copy_to_user(buf, req->buf, xfer))
+		if (copy_to_user(buf, req->buf, xfer)) {
+			printk("adb_read: error in copy_to_user\n");
 			r = -EFAULT;
-
-	} else
+		}
+	} else {
+		printk("adb read -EIO due to dev->error 2\n");
 		r = -EIO;
+	}
 
 done:
 	adb_unlock(&dev->read_excl);
