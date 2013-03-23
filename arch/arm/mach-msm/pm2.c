@@ -899,6 +899,18 @@ static int msm_pm_power_collapse
 	/* This location tell us we are doing a PC */
 	*(uint32_t *)(virt_start_ptr + 0x34) = 0x1;
 
+	/*
+	 * Clear the locations 0x50 & 0x54
+	 * Where we are logging the SPM0 CFG & CTL regs
+	 */
+	*(uint32_t *)(virt_start_ptr + 0x50) = 0x0;
+	*(uint32_t *)(virt_start_ptr + 0x54) = 0x0;
+
+	/*
+	 * Write known value to APPS PWRDOWN register
+	 */
+	*(uint32_t *)(virt_start_ptr + 0x58) = 0xDEAD;
+
 	/* This location tell us what PC we are doing
 	 * i.e. idle/suspend
 	 * idlePC	--> 0x2
@@ -1362,6 +1374,13 @@ static int __ref msm_pm_power_collapse_standalone(bool from_idle)
 
 	switch (cpu) {
 	case 0:
+		/*
+		 * Clear the locations 0x50 & 0x54
+		 * Where we are logging the SPM0 CFG & CTL regs
+		 */
+		*(uint32_t *)(virt_start_ptr + 0x50) = 0x0;
+		*(uint32_t *)(virt_start_ptr + 0x54) = 0x0;
+
 		*(uint32_t *)(virt_start_ptr + 0x10) = 0x1;
 		*(uint32_t *)(virt_start_ptr + 0x20) = 0x1;
 
@@ -1370,6 +1389,13 @@ static int __ref msm_pm_power_collapse_standalone(bool from_idle)
 
 		break;
 	case 1:
+		/*
+		 * Clear the locations 0x60 & 0x64
+		 * Where we are logging the SPM0 CFG & CTL regs
+		 */
+		*(uint32_t *)(virt_start_ptr + 0x60) = 0x0;
+		*(uint32_t *)(virt_start_ptr + 0x64) = 0x0;
+
 		*(uint32_t *)(virt_start_ptr + 0x14) = 0x1;
 
 		/*
@@ -1387,6 +1413,13 @@ static int __ref msm_pm_power_collapse_standalone(bool from_idle)
 		*(uint32_t *)(virt_start_ptr + 0x44) = 0xDEADBEEF;
 		break;
 	case 2:
+		/*
+		 * Clear the locations 0x70 & 0x74
+		 * Where we are logging the SPM0 CFG & CTL regs
+		 */
+		*(uint32_t *)(virt_start_ptr + 0x70) = 0x0;
+		*(uint32_t *)(virt_start_ptr + 0x74) = 0x0;
+
 		*(uint32_t *)(virt_start_ptr + 0x18) = 0x1;
 
 		/*
@@ -1404,6 +1437,13 @@ static int __ref msm_pm_power_collapse_standalone(bool from_idle)
 		*(uint32_t *)(virt_start_ptr + 0x48) = 0xDEADBEEF;
 		break;
 	case 3:
+		/*
+		 * Clear the locations 0x80 & 0x84
+		 * Where we are logging the SPM0 CFG & CTL regs
+		 */
+		*(uint32_t *)(virt_start_ptr + 0x80) = 0x0;
+		*(uint32_t *)(virt_start_ptr + 0x84) = 0x0;
+
 		*(uint32_t *)(virt_start_ptr + 0x1C) = 0x1;
 
 		/*
@@ -1960,6 +2000,11 @@ static int __init msm_pm_init(void)
 		__raw_writel(val, (MSM_CFG_CTL_BASE + 0x38));
 
 		l2x0_base_addr = MSM_L2CC_BASE;
+		spm0_base_addr = MSM_SAW0_BASE;
+		spm1_base_addr = MSM_SAW1_BASE;
+		spm2_base_addr = MSM_SAW2_BASE;
+		spm3_base_addr = MSM_SAW3_BASE;
+		apps_pwr_dwn   = APPS_PWRDOWN;
 	}
 
 	idle_v7_start_ptr = virt_start_ptr;
