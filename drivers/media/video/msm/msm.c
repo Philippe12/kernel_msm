@@ -1954,8 +1954,10 @@ static int msm_open(struct file *f)
 		pmctl = msm_camera_get_mctl(pcam->mctl_handle);
 
 #ifdef CONFIG_MSM_MULTIMEDIA_USE_ION
-		pmctl->client = msm_ion_client_create(-1, "camera");
-		kref_init(&pmctl->refcount);
+		if (!pmctl->client) {
+			pmctl->client = msm_ion_client_create(-1, "camera");
+			kref_init(&pmctl->refcount);
+		}
 		ion_client_created = 1;
 #endif
 
