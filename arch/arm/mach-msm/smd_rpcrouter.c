@@ -1,7 +1,7 @@
 /* arch/arm/mach-msm/smd_rpcrouter.c
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2007-2012, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2007-2013, The Linux Foundation. All rights reserved.
  * Author: San Mehat <san@android.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -1038,7 +1038,9 @@ static char *type_to_str(int i)
 	}
 }
 #endif
-
+static struct timespec dog_keepalive_time0;
+static struct timespec dog_keepalive_time1;
+static struct timespec dog_keepalive_time2;
 static void do_read_data(struct work_struct *work)
 {
 	struct rr_header hdr;
@@ -1055,11 +1057,12 @@ static void do_read_data(struct work_struct *work)
 		container_of(work,
 			     struct rpcrouter_xprt_info,
 			     read_data);
-
+	do_posix_clock_monotonic_gettime(&dog_keepalive_time0);
 	if (rr_read(xprt_info, &hdr, sizeof(hdr)))
 		goto fail_io;
 
-	RR("- ver=%d type=%d src=%d:%08x crx=%d siz=%d dst=%d:%08x\n",
+	do_posix_clock_monotonic_gettime(&dog_keepalive_time1);
+	printk("- ver=%d type=%d src=%d:%08x crx=%d siz=%d dst=%d:%08x\n",
 	   hdr.version, hdr.type, hdr.src_pid, hdr.src_cid,
 	   hdr.confirm_rx, hdr.size, hdr.dst_pid, hdr.dst_cid);
 	RAW_HDR("[r rr_h] "
@@ -1208,6 +1211,7 @@ packet_complete:
 	D("%s: take read lock on ept %p\n", __func__, ept);
 	wake_lock(&ept->read_q_wake_lock);
 	list_add_tail(&pkt->list, &ept->read_q);
+	do_posix_clock_monotonic_gettime(&dog_keepalive_time2);
 	wake_up(&ept->wait_q);
 	spin_unlock(&ept->read_q_lock);
 	spin_unlock_irqrestore(&local_endpoints_lock, flags);
@@ -2389,6 +2393,7 @@ static void debugfs_init(void)
 static void debugfs_init(void) {}
 #endif
 
+work_func_t dog_keepalive_work_func = do_read_data;
 static int msm_rpcrouter_add_xprt(struct rpcrouter_xprt *xprt)
 {
 	struct rpcrouter_xprt_info *xprt_info;
@@ -2501,6 +2506,7 @@ static void xprt_close_worker(struct work_struct *work)
 	kfree(xprt_work);
 }
 
+static struct timespec dog_keepalive_time3;
 void msm_rpcrouter_xprt_notify(struct rpcrouter_xprt *xprt, unsigned event)
 {
 	struct rpcrouter_xprt_info *xprt_info;
@@ -2544,6 +2550,7 @@ void msm_rpcrouter_xprt_notify(struct rpcrouter_xprt *xprt, unsigned event)
 			wake_lock(&xprt_info->wakelock);
 		wake_up(&xprt_info->read_wait);
 		spin_unlock_irqrestore(&xprt_info->lock, flags);
+		do_posix_clock_monotonic_gettime(&dog_keepalive_time3);
 	}
 }
 
