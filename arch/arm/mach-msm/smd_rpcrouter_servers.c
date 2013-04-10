@@ -1,7 +1,7 @@
 /* arch/arm/mach-msm/rpc_servers.c
  *
  * Copyright (C) 2007 Google, Inc.
- * Copyright (c) 2009-2010, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2009-2010, 2013, The Linux Foundation. All rights reserved.
  * Author: Iliyan Malchev <ibm@android.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -496,6 +496,8 @@ void msm_rpc_server_get_requesting_client(struct msm_rpc_client_info *clnt_info)
 	get_requesting_client(endpoint, current_xid, clnt_info);
 }
 
+static struct timespec dog_keepalive_time4;
+static struct timespec dog_keepalive_time5;
 static int rpc_servers_thread(void *data)
 {
 	void *buffer, *buf;
@@ -518,6 +520,7 @@ static int rpc_servers_thread(void *data)
 		rc = wait_event_interruptible(endpoint->wait_q,
 					      !list_empty(&endpoint->read_q));
 		wake_lock(&rpc_servers_wake_lock);
+		do_posix_clock_monotonic_gettime(&dog_keepalive_time4);
 
 		rc = msm_rpc_read(endpoint, &buffer, -1, -1);
 		if (rc < 0) {
@@ -545,6 +548,7 @@ static int rpc_servers_thread(void *data)
 			goto free_buffer;
 		}
 
+		do_posix_clock_monotonic_gettime(&dog_keepalive_time5);
 		if (server->version == 2)
 			rc = server->rpc_call2(server, &req, &server_xdr);
 		else {
