@@ -1041,6 +1041,7 @@ static char *type_to_str(int i)
 static struct timespec dog_keepalive_time0;
 static struct timespec dog_keepalive_time1;
 static struct timespec dog_keepalive_time2;
+static int dog_keepalive_read_data = 0;
 static void do_read_data(struct work_struct *work)
 {
 	struct rr_header hdr;
@@ -1057,12 +1058,13 @@ static void do_read_data(struct work_struct *work)
 		container_of(work,
 			     struct rpcrouter_xprt_info,
 			     read_data);
+	dog_keepalive_read_data = 0;
 	do_posix_clock_monotonic_gettime(&dog_keepalive_time0);
 	if (rr_read(xprt_info, &hdr, sizeof(hdr)))
 		goto fail_io;
 
 	do_posix_clock_monotonic_gettime(&dog_keepalive_time1);
-	printk("- ver=%d type=%d src=%d:%08x crx=%d siz=%d dst=%d:%08x\n",
+	RR("- ver=%d type=%d src=%d:%08x crx=%d siz=%d dst=%d:%08x\n",
 	   hdr.version, hdr.type, hdr.src_pid, hdr.src_cid,
 	   hdr.confirm_rx, hdr.size, hdr.dst_pid, hdr.dst_cid);
 	RAW_HDR("[r rr_h] "
@@ -1088,6 +1090,7 @@ static void do_read_data(struct work_struct *work)
 			modem_reset_startup(xprt_info);
 		}
 
+		dog_keepalive_read_data = 1;
 		if (rr_read(xprt_info, xprt_info->r2r_buf, hdr.size))
 			goto fail_io;
 		process_control_msg(xprt_info,
@@ -1099,6 +1102,7 @@ static void do_read_data(struct work_struct *work)
 		DIAG("runt packet (no pacmark)\n");
 		goto fail_data;
 	}
+	dog_keepalive_read_data = 2;
 	if (rr_read(xprt_info, &pm, sizeof(pm)))
 		goto fail_io;
 
@@ -1107,6 +1111,7 @@ static void do_read_data(struct work_struct *work)
 	frag = rr_malloc(sizeof(*frag));
 	frag->next = NULL;
 	frag->length = hdr.size;
+	dog_keepalive_read_data = 3;
 	if (rr_read(xprt_info, frag->data, hdr.size)) {
 		kfree(frag);
 		goto fail_io;
@@ -2529,7 +2534,7 @@ void msm_rpcrouter_xprt_notify(struct rpcrouter_xprt *xprt, unsigned event)
 		break;
 
 	case RPCROUTER_XPRT_EVENT_CLOSE:
-		D("close event for '%s'\n", xprt->name);
+		printk("close event for '%s'\n", xprt->name);
 
 		atomic_inc(&pending_close_count);
 
