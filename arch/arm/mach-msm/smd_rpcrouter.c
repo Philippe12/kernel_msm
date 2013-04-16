@@ -2512,6 +2512,9 @@ static void xprt_close_worker(struct work_struct *work)
 }
 
 static struct timespec dog_keepalive_time3;
+extern int dog_keepalive_progress;
+uint32_t dog_keepalive_avail;
+uint32_t dog_keepalive_need;
 void msm_rpcrouter_xprt_notify(struct rpcrouter_xprt *xprt, unsigned event)
 {
 	struct rpcrouter_xprt_info *xprt_info;
@@ -2549,6 +2552,9 @@ void msm_rpcrouter_xprt_notify(struct rpcrouter_xprt *xprt, unsigned event)
 	xprt_info = xprt->priv;
 	if (xprt_info) {
 		spin_lock_irqsave(&xprt_info->lock, flags);
+		dog_keepalive_progress = 5;
+		dog_keepalive_avail = xprt->read_avail();
+		dog_keepalive_need = xprt_info->need_len;
 		/* Check read_avail even for OPEN event to handle missed
 		   DATA events while processing the OPEN event*/
 		if (xprt->read_avail() >= xprt_info->need_len)

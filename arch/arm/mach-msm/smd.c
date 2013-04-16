@@ -1239,6 +1239,7 @@ static void handle_smd_irq_closing_list(void)
 	spin_unlock_irqrestore(&smd_lock, flags);
 }
 
+int dog_keepalive_progress = 0;
 static void handle_smd_irq(struct list_head *list, void (*notify)(void))
 {
 	unsigned long flags;
@@ -1248,6 +1249,7 @@ static void handle_smd_irq(struct list_head *list, void (*notify)(void))
 	unsigned char state_change;
 
 	spin_lock_irqsave(&smd_lock, flags);
+	dog_keepalive_progress = 0;
 	list_for_each_entry(ch, list, ch_list) {
 		state_change = 0;
 		ch_flags = 0;
@@ -1259,6 +1261,7 @@ static void handle_smd_irq(struct list_head *list, void (*notify)(void))
 			if (ch->half_ch->get_fTAIL(ch->recv)) {
 				ch->half_ch->set_fTAIL(ch->recv, 0);
 				ch_flags |= 2;
+				dog_keepalive_progress = 1;
 			}
 			if (ch->half_ch->get_fSTATE(ch->recv)) {
 				ch->half_ch->set_fSTATE(ch->recv, 0);
@@ -1279,6 +1282,7 @@ static void handle_smd_irq(struct list_head *list, void (*notify)(void))
 					ch->read_avail(ch),
 					ch->fifo_size - ch->write_avail(ch));
 			ch->notify(ch->priv, SMD_EVENT_DATA);
+			dog_keepalive_progress = 2;
 		}
 		if (ch_flags & 0x4 && !state_change) {
 			SMx_POWER_INFO("SMD ch%d '%s' State update\n",
