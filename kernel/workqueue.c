@@ -976,8 +976,6 @@ static bool is_chained_work(struct workqueue_struct *wq)
 	return false;
 }
 
-extern work_func_t dog_keepalive_work_func;
-static struct timespec dog_keepalive_time6;
 static void __queue_work(unsigned int cpu, struct workqueue_struct *wq,
 			 struct work_struct *work)
 {
@@ -1046,10 +1044,6 @@ static void __queue_work(unsigned int cpu, struct workqueue_struct *wq,
 	} else {
 		work_flags |= WORK_STRUCT_DELAYED;
 		worklist = &cwq->delayed_works;
-	}
-
-	if (dog_keepalive_work_func == work->func) {
-		do_posix_clock_monotonic_gettime(&dog_keepalive_time6);
 	}
 
 	insert_work(cwq, work, worklist, work_flags);
@@ -1797,10 +1791,6 @@ static void cwq_dec_nr_in_flight(struct cpu_workqueue_struct *cwq, int color,
  * CONTEXT:
  * spin_lock_irq(gcwq->lock) which is released and regrabbed.
  */
- 
-static struct timespec dog_keepalive_time8;
-static struct timespec dog_keepalive_time9;
-static struct timespec dog_keepalive_time10;
 static void process_one_work(struct worker *worker, struct work_struct *work)
 __releases(&gcwq->lock)
 __acquires(&gcwq->lock)
@@ -1868,21 +1858,12 @@ __acquires(&gcwq->lock)
 		worker_set_flags(worker, WORKER_CPU_INTENSIVE, true);
 
 	spin_unlock_irq(&gcwq->lock);
-	if (dog_keepalive_work_func == work->func) {
-		do_posix_clock_monotonic_gettime(&dog_keepalive_time8);
-	}
+
 	work_clear_pending(work);
 	lock_map_acquire_read(&cwq->wq->lockdep_map);
 	lock_map_acquire(&lockdep_map);
 	trace_workqueue_execute_start(work);
-	if (dog_keepalive_work_func == work->func) {
-		do_posix_clock_monotonic_gettime(&dog_keepalive_time9);
-	}
 	f(work);
-	if (dog_keepalive_work_func == work->func) {
-		do_posix_clock_monotonic_gettime(&dog_keepalive_time10);
-	}
-
 	/*
 	 * While we must be careful to not use "work" after this, the trace
 	 * point will only record its address.
@@ -1945,11 +1926,11 @@ static void process_scheduled_works(struct worker *worker)
  * belong to workqueues with a rescuer which will be explained in
  * rescuer_thread().
  */
-static struct timespec dog_keepalive_time7;
 static int worker_thread(void *__worker)
 {
 	struct worker *worker = __worker;
 	struct global_cwq *gcwq = worker->gcwq;
+
 	/* tell the scheduler that this is a workqueue worker */
 	worker->task->flags |= PF_WQ_WORKER;
 woke_up:
@@ -1990,9 +1971,7 @@ recheck:
 		struct work_struct *work =
 			list_first_entry(&gcwq->worklist,
 					 struct work_struct, entry);
-		if (dog_keepalive_work_func == work->func) {
-			do_posix_clock_monotonic_gettime(&dog_keepalive_time7);
-		}
+
 		if (likely(!(*work_data_bits(work) & WORK_STRUCT_LINKED))) {
 			/* optimization path, not strictly necessary */
 			process_one_work(worker, work);
