@@ -46,6 +46,15 @@
 
 #endif /* !CONFIG_INPUT_LTR558 */
 
+#ifdef CONFIG_INPUT_ISL29028
+#include <linux/input/isl29028.h>
+
+#ifndef ISL29028_IRQ_GPIO
+#define ISL29028_IRQ_GPIO 17
+#endif
+
+#endif /* !CONFIG_INPUT_ISL29028 */
+
 #ifdef CONFIG_AVAGO_APDS990X
 #ifndef APDS990X_IRQ_GPIO
 #define APDS990X_IRQ_GPIO 17
@@ -279,12 +288,32 @@ static struct i2c_board_info bma250_i2c_info[] __initdata = {
 #endif
 
 #ifdef CONFIG_INPUT_ISL29028
+static struct isl29028_platform_data isl29028_pdata = {
+	.int_gpio = MSM_GPIO_TO_INT(ISL29028_IRQ_GPIO),
+};
+
 /* ISL29028 BUS0 ID 0x44 */
 static struct i2c_board_info isl29028_i2c_info[] __initdata = {
 	{
 		I2C_BOARD_INFO("isl29028", 0x44),
+		.platform_data =  &isl29028_pdata
 	},
 };
+
+static struct msm_gpio isl29028_gpio_cfg_data[] = {
+	{GPIO_CFG(ISL29028_IRQ_GPIO, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_6MA), "isl29028_ALS_PS_int"},
+};
+
+static int isl29028_gpio_setup(void) {
+	int ret = 0;
+	ret = msm_gpios_request_enable(isl29028_gpio_cfg_data, 1);
+	if(ret < 0)
+		printk(KERN_ERR "%s: Failed to obtain acc int GPIO %d. Code: %d\n",
+				__func__, isl29028_pdata.int_gpio, ret);
+
+	return ret;
+}
+
 #endif
 
 #ifdef CONFIG_INPUT_LTR558
@@ -478,6 +507,7 @@ void __init msm7627a_sensor_init(void)
 #ifdef CONFIG_INPUT_ISL29028
 	if (machine_is_msm8625q_skud()) {
 		pr_info("i2c_register_board_info ISL29028 ALP sensor!\n");
+		isl29028_gpio_setup();
 		i2c_register_board_info(MSM_GSBI0_QUP_I2C_BUS_ID,
 					isl29028_i2c_info,
 					ARRAY_SIZE(isl29028_i2c_info));
