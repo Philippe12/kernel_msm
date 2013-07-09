@@ -1241,6 +1241,9 @@ vector_fiq:
 .LCvswi:
 	.word	vector_swi
 
+	.globl	vector_fiq_offset
+	.equ	vector_fiq_offset, vector_fiq
+
 	.section .vectors, "ax", %progbits
 __vectors_start:
 	W(b)	vector_rst
