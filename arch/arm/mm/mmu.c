@@ -1320,7 +1320,6 @@ void mem_text_write_kernel_word(unsigned long *addr, unsigned long word)
 }
 EXPORT_SYMBOL(mem_text_write_kernel_word);
 
-extern char __init_data[];
 volatile  __section(.log.data) int reserved_area = 0;
 
 static void __init map_lowmem(void)
@@ -1350,7 +1349,7 @@ static void __init map_lowmem(void)
 #ifdef CONFIG_STRICT_MEMORY_RWX
 		if (start <= __pa(_text) && __pa(_text) < end) {
 			map.length = SECTION_SIZE;
-			map.type = MT_MEMORY;
+			map.type = MT_MEMORY_RW;
 
 			create_mapping(&map, false);
 
@@ -1370,14 +1369,15 @@ static void __init map_lowmem(void)
 
 			map.pfn = __phys_to_pfn(__pa(__init_begin));
 			map.virtual = (unsigned long)__init_begin;
-			map.length = __init_data - __init_begin;
-			map.type = MT_MEMORY;
+			map.length = (char *)__arch_info_begin - __init_begin;
+			map.type = MT_MEMORY_RX;
 
 			create_mapping(&map, false);
 #ifdef CONFIG_UNCACHED_BUF
-			map.pfn = __phys_to_pfn(__pa(__init_data));
-			map.virtual = (unsigned long)__init_data;
-			map.length = uncached_start - (unsigned int)__init_data;
+			map.pfn = __phys_to_pfn(__pa(__arch_info_begin));
+			map.virtual = (unsigned long)__arch_info_begin;
+			map.length = __phys_to_virt(end) -
+				(unsigned long)__arch_info_begin;
 			map.type = MT_MEMORY_RW;
 
 			create_mapping(&map, false);
@@ -1394,9 +1394,10 @@ static void __init map_lowmem(void)
 			map.length = end - __virt_to_phys(uncached_end);
 			map.type = MT_MEMORY_RW;
 #else
-			map.pfn = __phys_to_pfn(__pa(__init_data));
-			map.virtual = (unsigned long)__init_data;
-			map.length = __phys_to_virt(end) - (unsigned int)__init_data;
+			map.pfn = __phys_to_pfn(__pa(__arch_info_begin));
+			map.virtual = (unsigned long)__arch_info_begin;
+			map.length = __phys_to_virt(end) -
+				(unsigned long)__arch_info_begin;
 			map.type = MT_MEMORY_RW;
 #endif
 		} else {
