@@ -231,7 +231,7 @@ early_param("coherent_pool", early_coherent_pool);
  */
 static int __init coherent_init(void)
 {
-	pgprot_t prot = pgprot_dmacoherent(pgprot_kernel);
+	pgprot_t prot = pgprot_dmacoherent(PAGE_KERNEL);
 	size_t size = coherent_pool_size;
 	struct page *page;
 	void *ptr;
@@ -520,7 +520,7 @@ static void *__alloc_from_contiguous(struct device *dev, size_t size,
 static void __free_from_contiguous(struct device *dev, struct page *page,
 				   size_t size)
 {
-	__dma_remap(page, size, pgprot_kernel);
+	__dma_remap(page, size, PAGE_KERNEL);
 	dma_release_from_contiguous(dev, page, size >> PAGE_SHIFT);
 }
 
