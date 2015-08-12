@@ -67,3 +67,5 @@ obj-$(CONFIG_AVAGO_APDS990X)            += apds990x.o
 obj-$(CONFIG_INPUT_ISL29028)            += isl29028.o
 obj-$(CONFIG_INPUT_LIS3DH)              += lis3dh.o
 obj-$(CONFIG_SENSORS_TMD2771X)	+= tmd2771x.o
+obj-$(CONFIG_BMP18X)			+= bmp18x-core.o
+obj-$(CONFIG_BMP18X_I2C)		+= bmp18x-i2c.o
