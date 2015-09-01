@@ -195,6 +195,7 @@ static struct platform_device kp_pdev_8625 = {
 };
 
 /* skud keypad device information */
+#if 0
 static unsigned int kp_row_gpios_skud[] = {31, 32};
 static unsigned int kp_col_gpios_skud[] = {37};
 
@@ -215,6 +216,42 @@ static struct gpio_event_matrix_info kp_matrix_info_skud = {
 	.flags          = GPIOKPF_LEVEL_TRIGGERED_IRQ | GPIOKPF_ACTIVE_HIGH |
 			  GPIOKPF_PRINT_UNMAPPED_KEYS,
 };
+
+#else
+//static unsigned int kp_row_gpios[] = {31, 32, 33, 34, 35};
+//static unsigned int kp_col_gpios[] = {36, 37, 38, 39, 40};
+
+static unsigned int kp_row_gpios_skud[] = {31,32,33,34};
+static unsigned int kp_col_gpios_skud[] = {37,38,40};
+
+static const unsigned short keymap_skud[] = {
+	[KP_INDEX(0, 0)] = KEY_VOLUMEUP,
+	[KP_INDEX(0, 1)] = KEY_VOLUMEDOWN,
+	[KP_INDEX(0, 2)] = 0,
+	[KP_INDEX(0, 3)] = KEY_PROG1,
+	[KP_INDEX(1, 0)] = 0,
+	[KP_INDEX(1, 1)] = KEY_CAMERA,
+	[KP_INDEX(1, 2)] = KEY_HOME,
+	[KP_INDEX(1, 3)] = 0,
+	[KP_INDEX(2, 0)] = 0,
+	[KP_INDEX(2, 1)] = 0,
+	[KP_INDEX(2, 2)] = 0,
+	[KP_INDEX(2, 3)] = 0,
+};
+
+static struct gpio_event_matrix_info kp_matrix_info_skud = {
+	.info.func      = gpio_event_matrix_func,
+	.keymap         = keymap_skud,
+	.output_gpios   = kp_row_gpios_skud,
+	.input_gpios    = kp_col_gpios_skud,
+	.noutputs       = ARRAY_SIZE(kp_row_gpios_skud),
+	.ninputs        = ARRAY_SIZE(kp_col_gpios_skud),
+	.settle_time.tv64 = 40 * NSEC_PER_USEC,
+	.poll_time.tv64 = 20 * NSEC_PER_MSEC,
+	.flags          = GPIOKPF_LEVEL_TRIGGERED_IRQ | GPIOKPF_DRIVE_INACTIVE |
+			  GPIOKPF_PRINT_UNMAPPED_KEYS,
+};
+#endif
 
 static struct gpio_event_info *kp_info_skud[] = {
 	&kp_matrix_info_skud.info,
