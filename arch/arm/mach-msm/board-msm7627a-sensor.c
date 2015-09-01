@@ -287,6 +287,31 @@ static struct i2c_board_info bma250_i2c_info[] __initdata = {
 };
 #endif
 
+#ifdef CONFIG_BMP18X_I2C
+static struct i2c_board_info bmp18x_i2c_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("bmp18x", 0x77),
+	},
+};
+#endif
+
+#ifdef CONFIG_SENSORS_BMA250
+static struct i2c_board_info bma250_i2c_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("bma250", 0x18),
+		.irq = -1,
+	},
+};
+#endif
+
+#ifdef CONFIG_SENSORS_BMM050
+static struct i2c_board_info bmm050_i2c_info[] __initdata = {
+	{
+		I2C_BOARD_INFO("bmm050", 0x10),
+	},
+};
+#endif
+
 #ifdef CONFIG_INPUT_ISL29028
 static struct isl29028_platform_data isl29028_pdata = {
 	.int_gpio = MSM_GPIO_TO_INT(ISL29028_IRQ_GPIO),
@@ -565,5 +590,31 @@ void __init msm7627a_sensor_init(void)
 	}
 #endif
 
+#ifdef CONFIG_SENSORS_BMA250
+	if (machine_is_msm8625q_skud()) {
+		pr_info("i2c_register_board_info BMA250 sensor\n");
+		i2c_register_board_info(1,
+					bma250_i2c_info,
+					ARRAY_SIZE(bma250_i2c_info));
+	}
+#endif
+
+#ifdef CONFIG_SENSORS_BMM050
+	if (machine_is_msm8625q_skud()) {
+		pr_info("i2c_register_board_info BMC050 sensor\n");
+		i2c_register_board_info(1,
+					bmm050_i2c_info,
+					ARRAY_SIZE(bmm050_i2c_info));
+	}
+#endif
+
+#ifdef CONFIG_BMP18X_I2C
+	if (machine_is_msm8625q_skud()) {
+		pr_info("i2c_register_board_info BMP180 Pressure sensor!\n");
+		i2c_register_board_info(3,
+					bmp18x_i2c_info,
+					ARRAY_SIZE(bmp18x_i2c_info));
+	}
+#endif
 
 }
