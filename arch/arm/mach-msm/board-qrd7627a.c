@@ -165,6 +165,10 @@ static struct msm_gpio msm8625q_i2c_gpio_config[] = {
 		"qup_scl" },
 	{ GPIO_CFG(36, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
 		"qup_sda" },
+	{ GPIO_CFG(14, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
+		"qup_scl" },
+	{ GPIO_CFG(9, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_8MA),
+		"qup_sda" },
 };
 
 static struct i2c_gpio_platform_data msm8625q_i2c_gpio_pdata = {
@@ -178,6 +182,20 @@ static struct platform_device msm8625q_i2c_gpio = {
 	.id	= 2,
 	.dev	= {
 		.platform_data = &msm8625q_i2c_gpio_pdata,
+	}
+};
+
+static struct i2c_gpio_platform_data msm8625q_i2c_3_gpio_pdata = {
+	.scl_pin = 14,
+	.sda_pin = 9,
+	.udelay = 5, /* 100 Khz */
+};
+
+static struct platform_device msm8625q_i2c_3_gpio = {
+	.name	= "i2c-gpio",
+	.id	= 3,
+	.dev	= {
+		.platform_data = &msm8625q_i2c_3_gpio_pdata,
 	}
 };
 
@@ -1147,6 +1165,10 @@ static void __init msm8625_device_i2c_init(void)
 				pr_err("I2C-gpio tlmm config failed\n");
 		}
 		rc = platform_device_register(&msm8625q_i2c_gpio);
+		if (rc)
+			pr_err("%s: could not register i2c-gpio device: %d\n",
+						__func__, rc);
+		rc = platform_device_register(&msm8625q_i2c_3_gpio);
 		if (rc)
 			pr_err("%s: could not register i2c-gpio device: %d\n",
 						__func__, rc);
