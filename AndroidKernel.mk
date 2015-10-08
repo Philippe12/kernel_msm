@@ -42,7 +42,8 @@ else
 TARGET_PREBUILT_KERNEL := $(TARGET_PREBUILT_INT_KERNEL)
 endif
 
-KERNEL_CROSS := /media/Android/android2/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
+#KERNEL_CROSS := /media/Android/android2/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
+KERNEL_CROSS := /media/Android/android/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/bin/arm-eabi-
 
 define mv-modules
 mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.dep`;\
