@@ -1,94 +1,89 @@
 #Android makefile to build kernel as a part of Android Build
 PERL		= perl
-
+TARGET_KERNEL_ARCH := $(strip $(TARGET_KERNEL_ARCH))
+ifeq ($(TARGET_KERNEL_ARCH),)
+KERNEL_ARCH := arm
+else
+KERNEL_ARCH := $(TARGET_KERNEL_ARCH)
+endif
+TARGET_KERNEL_HEADER_ARCH := $(strip $(TARGET_KERNEL_HEADER_ARCH))
+ifeq ($(TARGET_KERNEL_HEADER_ARCH),)
+KERNEL_HEADER_ARCH := $(KERNEL_ARCH)
+else
+$(warning Forcing kernel header generation only for '$(TARGET_KERNEL_HEADER_ARCH)')
+KERNEL_HEADER_ARCH := $(TARGET_KERNEL_HEADER_ARCH)
+endif
+TARGET_KERNEL_CROSS_COMPILE_PREFIX := $(strip $(TARGET_KERNEL_CROSS_COMPILE_PREFIX))
+ifeq ($(TARGET_KERNEL_CROSS_COMPILE_PREFIX),)
+KERNEL_CROSS_COMPILE := arm-eabi-
+else
+KERNEL_CROSS_COMPILE := $(TARGET_KERNEL_CROSS_COMPILE_PREFIX)
+endif
 ifeq ($(TARGET_PREBUILT_KERNEL),)
-
 KERNEL_OUT := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ
 KERNEL_CONFIG := $(KERNEL_OUT)/.config
-TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/arm/boot/zImage
+ifeq ($(TARGET_USES_UNCOMPRESSED_KERNEL),true)
+$(info Using uncompressed kernel)
+TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/Image
+else
+TARGET_PREBUILT_INT_KERNEL := $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/zImage
+endif
+ifeq ($(TARGET_KERNEL_APPEND_DTB), true)
+$(info Using appended DTB)
+TARGET_PREBUILT_INT_KERNEL := $(TARGET_PREBUILT_INT_KERNEL)-dtb
+endif
 KERNEL_HEADERS_INSTALL := $(KERNEL_OUT)/usr
 KERNEL_MODULES_INSTALL := system
 KERNEL_MODULES_OUT := $(TARGET_OUT)/lib/modules
-KERNEL_IMG=$(KERNEL_OUT)/arch/arm/boot/Image
-
-MSM_ARCH ?= $(shell $(PERL) -e 'while (<>) {$$a = $$1 if /CONFIG_ARCH_((?:MSM|QSD)[a-zA-Z0-9]+)=y/; $$r = $$1 if /CONFIG_MSM_SOC_REV_(?!NONE)(\w+)=y/;} print lc("$$a$$r\n");' $(KERNEL_CONFIG))
-KERNEL_USE_OF ?= $(shell $(PERL) -e '$$of = "n"; while (<>) { if (/CONFIG_USE_OF=y/) { $$of = "y"; break; } } print $$of;' kernel/arch/arm/configs/$(KERNEL_DEFCONFIG))
-
-ifeq "$(KERNEL_USE_OF)" "y"
-DTS_NAME ?= $(MSM_ARCH)
-DTS_FILES = $(wildcard $(TOP)/kernel/arch/arm/boot/dts/$(DTS_NAME)*.dts)
-DTS_FILE = $(lastword $(subst /, ,$(1)))
-DTB_FILE = $(addprefix $(KERNEL_OUT)/arch/arm/boot/,$(patsubst %.dts,%.dtb,$(call DTS_FILE,$(1))))
-ZIMG_FILE = $(addprefix $(KERNEL_OUT)/arch/arm/boot/,$(patsubst %.dts,%-zImage,$(call DTS_FILE,$(1))))
-KERNEL_ZIMG = $(KERNEL_OUT)/arch/arm/boot/zImage
-DTC = $(KERNEL_OUT)/scripts/dtc/dtc
-
-define append-dtb
-mkdir -p $(KERNEL_OUT)/arch/arm/boot;\
-$(foreach d, $(DTS_FILES), \
-   $(DTC) -p 1024 -O dtb -o $(call DTB_FILE,$(d)) $(d); \
-   cat $(KERNEL_ZIMG) $(call DTB_FILE,$(d)) > $(call ZIMG_FILE,$(d));)
-endef
-else
-
-define append-dtb
-endef
-endif
-
-ifeq ($(TARGET_USES_UNCOMPRESSED_KERNEL),true)
-$(info Using uncompressed kernel)
-TARGET_PREBUILT_KERNEL := $(KERNEL_OUT)/piggy
-else
+# relative path from KERNEL_OUT to kernel source directory
+KERNEL_SOURCE_RELATIVE_PATH := ../../../../../../kernel
 TARGET_PREBUILT_KERNEL := $(TARGET_PREBUILT_INT_KERNEL)
-endif
-
-#KERNEL_CROSS := /media/Android/android2/prebuilts/gcc/linux-x86/arm/arm-eabi-4.6/bin/arm-eabi-
-KERNEL_CROSS := /media/Android/android/prebuilts/gcc/linux-x86/arm/arm-eabi-4.8/bin/arm-eabi-
-
 define mv-modules
-mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.dep`;\
+mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.order`;\
 if [ "$$mdpath" != "" ];then\
 mpath=`dirname $$mdpath`;\
 ko=`find $$mpath/kernel -type f -name *.ko`;\
 for i in $$ko; do mv $$i $(KERNEL_MODULES_OUT)/; done;\
 fi
 endef
-
 define clean-module-folder
-mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.dep`;\
+mdpath=`find $(KERNEL_MODULES_OUT) -type f -name modules.order`;\
 if [ "$$mdpath" != "" ];then\
 mpath=`dirname $$mdpath`; rm -rf $$mpath;\
 fi
 endef
-
+include kernel/defconfig.mk
+KERNEL_HEADER_DEFCONFIG := $(strip $(KERNEL_HEADER_DEFCONFIG))
+ifeq ($(KERNEL_HEADER_DEFCONFIG),)
+KERNEL_HEADER_DEFCONFIG := $(TARGET_DEFCONFIG)
+endif
+define do-kernel-config
+	( cp $(3) $(2) && $(7) -C $(4) O=$(1) ARCH=$(5) CROSS_COMPILE=$(6) KBUILD_BUILD_USER=$(TARGET_KERNEL_BUILD_USER) KBUILD_BUILD_HOST=$(TARGET_KERNEL_BUILD_HOST) defoldconfig ) || ( rm -f $(2) && false )
+endef
 $(KERNEL_OUT):
 	mkdir -p $(KERNEL_OUT)
-
-$(KERNEL_CONFIG): $(KERNEL_OUT)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=$(KERNEL_CROSS) $(KERNEL_DEFCONFIG)
-
-$(KERNEL_OUT)/piggy : $(TARGET_PREBUILT_INT_KERNEL)
-	$(hide) gunzip -c $(KERNEL_OUT)/arch/arm/boot/compressed/piggy.gzip > $(KERNEL_OUT)/piggy
-
+$(KERNEL_CONFIG): $(KERNEL_OUT) $(TARGET_DEFCONFIG)
+	$(call do-kernel-config,../$(KERNEL_OUT),$@,$(TARGET_DEFCONFIG),kernel,$(KERNEL_ARCH),$(KERNEL_CROSS_COMPILE),$(MAKE))
 $(TARGET_PREBUILT_INT_KERNEL): $(KERNEL_OUT) $(KERNEL_CONFIG) $(KERNEL_HEADERS_INSTALL)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm SUBARCH=arm CROSS_COMPILE=$(KERNEL_CROSS)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm SUBARCH=arm CROSS_COMPILE=$(KERNEL_CROSS) modules
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) INSTALL_MOD_PATH=../../$(KERNEL_MODULES_INSTALL) ARCH=arm CROSS_COMPILE=$(KERNEL_CROSS) modules_install
+	$(hide) rm -rf $(KERNEL_OUT)/arch/$(KERNEL_ARCH)/boot/dts
+	$(MAKE) -C kernel KBUILD_RELSRC=$(KERNEL_SOURCE_RELATIVE_PATH) O=../$(KERNEL_OUT) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) KBUILD_BUILD_USER=$(TARGET_KERNEL_BUILD_USER) KBUILD_BUILD_HOST=$(TARGET_KERNEL_BUILD_HOST)
+	$(MAKE) -C kernel KBUILD_RELSRC=$(KERNEL_SOURCE_RELATIVE_PATH) O=../$(KERNEL_OUT) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) KBUILD_BUILD_USER=$(TARGET_KERNEL_BUILD_USER) KBUILD_BUILD_HOST=$(TARGET_KERNEL_BUILD_HOST) dtbs
+	$(MAKE) -C kernel KBUILD_RELSRC=$(KERNEL_SOURCE_RELATIVE_PATH) O=../$(KERNEL_OUT) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) KBUILD_BUILD_USER=$(TARGET_KERNEL_BUILD_USER) KBUILD_BUILD_HOST=$(TARGET_KERNEL_BUILD_HOST) modules
+	$(MAKE) -C kernel KBUILD_RELSRC=$(KERNEL_SOURCE_RELATIVE_PATH) O=../$(KERNEL_OUT) INSTALL_MOD_PATH=../../$(KERNEL_MODULES_INSTALL) INSTALL_MOD_STRIP="--strip-debug --remove-section=.note.gnu.build-id" ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) KBUILD_BUILD_USER=$(TARGET_KERNEL_BUILD_USER) KBUILD_BUILD_HOST=$(TARGET_KERNEL_BUILD_HOST) modules_install
 	$(mv-modules)
 	$(clean-module-folder)
-	$(append-dtb)
-
 $(KERNEL_HEADERS_INSTALL): $(KERNEL_OUT) $(KERNEL_CONFIG)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=$(KERNEL_CROSS) headers_install
-
+	$(hide) rm -f ../$(KERNEL_CONFIG)
+	$(call do-kernel-config,../$(KERNEL_OUT),$(KERNEL_CONFIG),$(KERNEL_HEADER_DEFCONFIG),kernel,$(KERNEL_HEADER_ARCH),$(KERNEL_CROSS_COMPILE),$(MAKE))
+	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=$(KERNEL_HEADER_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) KBUILD_BUILD_USER=$(TARGET_KERNEL_BUILD_USER) KBUILD_BUILD_HOST=$(TARGET_KERNEL_BUILD_HOST) headers_install
+	$(hide) rm -f ../$(KERNEL_CONFIG)
+	$(call do-kernel-config,../$(KERNEL_OUT),$(KERNEL_CONFIG),$(TARGET_DEFCONFIG),kernel,$(KERNEL_ARCH),$(KERNEL_CROSS_COMPILE),$(MAKE))
 kerneltags: $(KERNEL_OUT) $(KERNEL_CONFIG)
-	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=$(KERNEL_CROSS) tags
-
+	$(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) KBUILD_BUILD_USER=$(TARGET_KERNEL_BUILD_USER) KBUILD_BUILD_HOST=$(TARGET_KERNEL_BUILD_HOST) tags
 kernelconfig: $(KERNEL_OUT) $(KERNEL_CONFIG)
 	env KCONFIG_NOTIMESTAMP=true \
-	     $(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=$(KERNEL_CROSS) menuconfig
+	     $(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) KBUILD_BUILD_USER=$(TARGET_KERNEL_BUILD_USER) KBUILD_BUILD_HOST=$(TARGET_KERNEL_BUILD_HOST) menuconfig
 	env KCONFIG_NOTIMESTAMP=true \
-	     $(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=arm CROSS_COMPILE=$(KERNEL_CROSS) savedefconfig
-	cp $(KERNEL_OUT)/defconfig kernel/arch/arm/configs/$(KERNEL_DEFCONFIG)
-
+	     $(MAKE) -C kernel O=../$(KERNEL_OUT) ARCH=$(KERNEL_ARCH) CROSS_COMPILE=$(KERNEL_CROSS_COMPILE) KBUILD_BUILD_USER=$(TARGET_KERNEL_BUILD_USER) KBUILD_BUILD_HOST=$(TARGET_KERNEL_BUILD_HOST) savedefconfig
+	cp $(KERNEL_OUT)/defconfig kernel/arch/$(KERNEL_ARCH)/configs/$(KERNEL_DEFCONFIG)
 endif
